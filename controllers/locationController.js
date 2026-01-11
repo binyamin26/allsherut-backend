@@ -1,6 +1,6 @@
 // controllers/locationController.js
 const Location = require('../models/Location');
-const { normalizeCity } = require('../../frontend/src/data/israelLocations');
+const israelLocations = require('../data/israelLocations');
 
 class LocationController {
   /**
