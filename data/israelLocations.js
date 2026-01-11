@@ -1618,22 +1618,22 @@ const israelNeighborhoods = {
 // FONCTIONS UTILITAIRES
 // ═══════════════════════════════════════════════════════════════════════
 
-export const getAllCities = () => {
+ const getAllCities = () => {
   return israelCities.map(city => city.name);
 };
 
-export const getCitiesByArea = (area) => {
+ const getCitiesByArea = (area) => {
   if (!area) return getAllCities();
   return israelCities
     .filter(city => city.area === area)
     .map(city => city.name);
 };
 
-export const getNeighborhoodsByCity = (cityName) => {
+ const getNeighborhoodsByCity = (cityName) => {
   return israelNeighborhoods[cityName] || [];
 };
 
-export const normalizeCity = (cityName) => {
+ const normalizeCity = (cityName) => {
   if (!cityName) return null;
   
   const city = israelCities.find(c => 
@@ -1644,7 +1644,7 @@ export const normalizeCity = (cityName) => {
   return city ? city.name : cityName;
 };
 
-export const cityExists = (cityName) => {
+ const cityExists = (cityName) => {
   if (!cityName) return false;
   
   return israelCities.some(c => 
@@ -1653,7 +1653,7 @@ export const cityExists = (cityName) => {
   );
 };
 
-export const getCityInfo = (cityName) => {
+ const getCityInfo = (cityName) => {
   const normalizedName = normalizeCity(cityName);
   if (!normalizedName) return null;
   
@@ -1666,7 +1666,7 @@ export const getCityInfo = (cityName) => {
   };
 };
 
-export const searchCities = (query) => {
+ const searchCities = (query) => {
   if (!query || query.length < 2) return getAllCities();
   
   return israelCities
@@ -1680,7 +1680,7 @@ export const searchCities = (query) => {
     .map(city => city.name);
 };
 
-export const getLocationStats = () => {
+ const getLocationStats = () => {
   const totalCities = israelCities.length;
   const citiesWithNeighborhoods = Object.keys(israelNeighborhoods).length;
   const totalNeighborhoods = Object.values(israelNeighborhoods)
@@ -1702,5 +1702,14 @@ export const getLocationStats = () => {
 module.exports = {
   israelAreas,
   israelCities,
-  israelNeighborhoods
+  israelNeighborhoods,
+  getAllCities,
+  getCitiesByArea,
+  getNeighborhoodsByCity,
+  normalizeCity,
+  cityExists,
+  getCityInfo,
+  searchCities,
+  getLocationStats
 };
+
