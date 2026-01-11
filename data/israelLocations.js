@@ -2,7 +2,7 @@
 // Fusionné avec données OpenStreetMap + données manuelles
 // Total: ~100 villes, ~1200+ quartiers
 
-export const israelAreas = [
+const israelAreas = [
   "מרכז",
   "צפון", 
   "דרום",
@@ -14,7 +14,7 @@ export const israelAreas = [
   "השפלה",
 ];
 
-export const israelCities = [
+const israelCities = [
   // ══════════════════════════════════════════
   // מרכז - CENTRE
   // ══════════════════════════════════════════
@@ -149,7 +149,7 @@ export const israelCities = [
   { name: "אלקנה", area: "יהודה ושומרון", nameVariants: ["אלקנה"] },
 ];
 
-export const israelNeighborhoods = {
+const israelNeighborhoods = {
   // ═══════════════════════════════════════════════════════════════════════
   // תל אביב - TEL AVIV (~80 quartiers)
   // ═══════════════════════════════════════════════════════════════════════
@@ -1698,4 +1698,9 @@ export const getLocationStats = () => {
     coveragePercentage: Math.round((citiesWithNeighborhoods / totalCities) * 100),
     areaStats
   };
+};
+module.exports = {
+  israelAreas,
+  israelCities,
+  israelNeighborhoods
 };
