@@ -819,7 +819,8 @@ responseData.service_type = requestedService; // Mettre à jour le service actif
 responseData.serviceCreatedAt = providerProfile?.created_at || null; // ← AJOUTER CETTE LIGNE
       
 if (providerProfile && providerProfile.profileImage) {
-  responseData.profileImage = `http://localhost:5000${providerProfile.profileImage}`;
+  // On renvoie juste le chemin (ex: /uploads/photo.jpg)
+  responseData.profileImage = providerProfile.profileImage;
 }
     } else if (user.role === 'client') {
       responseData.contactCredits = await user.getContactCredits();

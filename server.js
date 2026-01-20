@@ -22,44 +22,24 @@ const {
 } = require('./middleware/subscriptionMiddleware');
 
 const app = express();
+app.set('trust proxy', 1); // Indispensable pour Render
 
 // =============================================
 // MIDDLEWARE DE SÉCURITÉ
 // =============================================
-
-// Configuration CORS
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'https://homesherut-frontend.vercel.app',
+  'http://localhost:5173',
+];
+// Remplacez votre bloc app.use(cors(...)) par celui-ci :
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      config.server.frontendUrl,
-      'http://localhost:5173',
-      'http://localhost:5174', 
-      'http://localhost:3000',
-      process.env.FRONTEND_URL
-    ].filter(Boolean);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.warn(`🚫 Requête CORS bloquée depuis: ${origin}`);
-      callback(new Error('Non autorisé par la politique CORS'));
-    }
-  },
+  origin: ['https://homesherut-frontend.vercel.app', 'http://localhost:5173'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Origin', 
-    'X-Requested-With', 
-    'Content-Type', 
-    'Accept', 
-    'Authorization',
-    'Cache-Control',
-    'Pragma'
-  ],
-  optionsSuccessStatus: 200
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+// Configuration CORS
+
 
 // Helmet pour la sécurité
 app.use(helmet({
@@ -97,6 +77,15 @@ app.use(globalLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(responseMiddleware);
+
+
+// 1. Route de test immédiat (Racine)
+app.get('/', (req, res) => {
+  res.json({ success: true, message: '🚀 Backend HomeSherut is running!' });
+});
+
+// 2. Route de santé (Health)
+app.use('/api/health', require('./routes/health'));
 
 // Logging en développement
 if (config.server.env === 'development') {
@@ -173,6 +162,12 @@ app.use('/api/reviews',
 
 // Gestion utilisateurs
 app.use('/api/users', require('./routes/users'));
+
+   // Route racine pour vérifier que le serveur est actif
+app.get('/', (req, res) => {
+  res.json({ success: true, message: '🚀 Backend HomeSherut is running!' });
+});
+
 
 // Upload avec rate limiting spécifique
 const uploadLimiter = rateLimit({
@@ -311,7 +306,9 @@ const startServer = async () => {
       process.exit(1);
     }
 
-    const PORT = config.server.port;
+    const PORT = process.env.PORT || 10000;
+
+
     app.listen(PORT, () => {
       console.log('\n🚀 ╔═══════════════════════════════════════════════╗');
       console.log(`✅ שרת HomeSherut פועל על פורט ${PORT}`);
@@ -386,7 +383,7 @@ cronService.start();
 // Gestion gracieuse de l'arrêt
 process.on('SIGTERM', () => {
   console.log('🔄 שרת נסגר בצורה מסודרת...');
-  process.exit(0);
+
 });
 
 process.on('SIGINT', () => {
@@ -396,24 +393,20 @@ process.on('SIGINT', () => {
   // TODO: Sauvegarder les données importantes avant fermeture
   setTimeout(() => {
     console.log('✅ נתונים נשמרו בהצלחה');
-    process.exit(0);
+
   }, 2000);
 });
 
-// Gestion des erreurs non capturées
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  // Ne pas fermer le serveur en production, juste logger
-  if (config.server.env !== 'production') {
-    process.exit(1);
-  }
+  console.error('❌ Unhandled Rejection:', reason);
+  // ne pas exit en prod
 });
 
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error);
-  // Fermer gracieusement même en production pour ce type d'erreur
-  process.exit(1);
+  // idéalement, loguer mais ne pas exit
 });
+
 
 // Démarrage
 startServer();
