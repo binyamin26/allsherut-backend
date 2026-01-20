@@ -29,7 +29,7 @@ const SERVICE_STATUS = {
  * GET /api/health
  * Vérification complète de l'état du serveur HomeSherut
  */
-router.get('/health', async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const startTime = Date.now();
     
