@@ -15,7 +15,7 @@ const pool = mysql.createPool({
 timezone: '+03:00', // Israël
   
   // Configuration simplifiée pour MySQL2
-ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   connectTimeout: 30000
 });
 
