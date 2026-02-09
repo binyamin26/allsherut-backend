@@ -59,7 +59,8 @@ router.post('/profile-image', authenticateToken, upload.single('profileImage'), 
       }
       return res.notFound('user');
     }
-const imageUrl = `/uploads/profiles/${req.file.filename}`;
+const baseUrl = process.env.BACKEND_URL || 'https://homesherut-backend.onrender.com';
+const imageUrl = `${baseUrl}/uploads/profiles/${req.file.filename}`;
 
 // ✅ Récupérer le service_type depuis le body
 const serviceType = req.body.serviceType || req.user.service_type;
