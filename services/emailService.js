@@ -49,7 +49,7 @@ class EmailService {
                   ${subtitle ? `<div style="margin-top: 8px; display: inline-block; background: rgba(255,255,255,0.2); padding: 5px 16px; border-radius: 20px; font-size: 13px; color: white; font-weight: 600;">${subtitle}</div>` : ''}
                 </td>
                 <td style="width: 110px; vertical-align: middle; text-align: left;">
-                  <img src="${this.logoUrl}" alt="AllSherut" style="width: 130px; height: 130px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.3); display: block;" />
+                  <img src="${this.logoUrl}" alt="AllSherut" style="width: 170px; height: 170px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.3); display: block;" />
                 </td>
               </tr>
             </table>
