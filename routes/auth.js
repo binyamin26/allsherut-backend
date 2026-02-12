@@ -66,31 +66,40 @@ const newPasswordValidator = body('newPassword').custom((value) => {
   return true;
 });
 
-// Configuration multer pour upload d'images
-const storage = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../uploads/profiles');
-    try {
-      await fs.mkdir(uploadDir, { recursive: true });
-      cb(null, uploadDir);
-    } catch (error) {
-      cb(error);
-    }
-  },
-filename: (req, file, cb) => {
-    // Déterminer l'extension depuis le MIME type (plus fiable que le nom original)
-    const mimeToExt = {
-      'image/jpeg': '.jpg',
-      'image/jpg': '.jpg',
-      'image/png': '.png',
-      'image/webp': '.webp'
-    };
-    const ext = mimeToExt[file.mimetype] || path.extname(file.originalname) || '.jpg';
-    
-    const uniqueName = `profile_${Date.now()}_${Math.random().toString(36).substring(2, 15)}${ext}`;
-    cb(null, uniqueName);
-  }
+// ============================================
+// CLOUDINARY CONFIG
+// ============================================
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
+const uploadToCloudinary = (fileBuffer, userId, serviceType) => {
+  return new Promise((resolve, reject) => {
+    const folder = 'homesherut/profiles';
+    const publicId = `profile-${userId}-${serviceType}-${Date.now()}`;
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        public_id: publicId,
+        resource_type: 'image',
+        transformation: [
+          { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+          { quality: 'auto', fetch_format: 'auto' }
+        ]
+      },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+    uploadStream.end(fileBuffer);
+  });
+};
+
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -219,7 +228,7 @@ body('phone').custom((value, { req }) => {
 
   ],
   async (req, res) => {
-    let uploadedFilePath = null;
+ 
     
     try {
       console.log(DEV_LOGS.AUTH.LOGIN_ATTEMPT, req.body.email);
@@ -227,14 +236,8 @@ body('phone').custom((value, { req }) => {
       // ✅ VALIDATION UNIFIÉE
       const validationErrors = validationResult(req);
       if (!validationErrors.isEmpty()) {
-        // Supprimer le fichier uploadé en cas d'erreur de validation
-        if (req.file) {
-          try {
-            await fs.unlink(req.file.path);
-          } catch (unlinkError) {
-            console.error(DEV_LOGS.API.ERROR_OCCURRED, 'File cleanup:', unlinkError);
-          }
-        }
+       
+      
         
         return res.validationError(
           validationErrors.array().map(err => ({
@@ -253,11 +256,6 @@ body('phone').custom((value, { req }) => {
         serviceType
       } = req.body;
 
-      // Stocker le chemin du fichier uploadé
-      if (req.file) {
-        uploadedFilePath = req.file.path;
-        console.log(DEV_LOGS.API.UPLOAD_STARTED, `Profile image for ${email}`);
-      }
 
       // Données de base pour la création utilisateur
       const userData = {
@@ -283,10 +281,10 @@ if (role === 'provider' && userData.tranziliaToken) {
   await Subscription.createTrialSubscription(user.id, userData.tranziliaToken);
 }
         // Sauvegarder l'image de profil si fournie
-        if (uploadedFilePath) {
-          const relativePath = path.relative(path.join(__dirname, '../'), uploadedFilePath);
-          await user.updateProfile({ profile_image_path: relativePath });
-          console.log(DEV_LOGS.API.UPLOAD_COMPLETED, `Profile image saved: ${relativePath}`);
+    if (req.file) {
+          const cloudinaryResult = await uploadToCloudinary(req.file.buffer, user.id, serviceType);
+          await user.updateProfile({ profile_image_path: cloudinaryResult.secure_url });
+          console.log('☁️ Image Cloudinary:', cloudinaryResult.secure_url);
         }
 
         console.log(DEV_LOGS.BUSINESS.PROVIDER_CREATED, user.id);
@@ -301,22 +299,16 @@ if (role === 'provider' && userData.tranziliaToken) {
           // Validation Step 2
           const step2Errors = User.validateProviderStep2(serviceType, serviceDetails, workingAreas);
           if (step2Errors.length > 0) {
-            // Supprimer le fichier uploadé en cas d'erreur
-            if (uploadedFilePath) {
-              try {
-                await fs.unlink(uploadedFilePath);
-              } catch (unlinkError) {
-                console.error(DEV_LOGS.API.ERROR_OCCURRED, 'File cleanup:', unlinkError);
-              }
-            }
             
             return res.validationError(step2Errors);
           }
 
-          // Créer provider complet avec détails
-          const relativePath = uploadedFilePath 
-            ? path.relative(path.join(__dirname, '../'), uploadedFilePath)
-            : null;
+          let relativePath = null;
+          if (req.file) {
+            const cloudinaryResult = await uploadToCloudinary(req.file.buffer, 'new', serviceType);
+            relativePath = cloudinaryResult.secure_url;
+            console.log('☁️ Image Cloudinary:', relativePath);
+          }
 
           user = await User.createProviderWithDetails(
             userData,
@@ -330,14 +322,6 @@ if (role === 'provider' && userData.tranziliaToken) {
         } catch (parseError) {
           console.error(DEV_LOGS.API.ERROR_OCCURRED, 'Step 2 data parsing:', parseError);
           
-          // Supprimer le fichier uploadé en cas d'erreur
-          if (uploadedFilePath) {
-            try {
-              await fs.unlink(uploadedFilePath);
-            } catch (unlinkError) {
-              console.error(DEV_LOGS.API.ERROR_OCCURRED, 'File cleanup:', unlinkError);
-            }
-          }
 return res.status(400).json({
   success: false,
   message: 'נתונים לא תקינים'
@@ -402,14 +386,7 @@ return res.status(400).json({
       }, user.id);
 
    } catch (error) {
-      // Supprimer le fichier uploadé en cas d'erreur
-      if (uploadedFilePath) {
-        try {
-          await fs.unlink(uploadedFilePath);
-        } catch (unlinkError) {
-          console.error(DEV_LOGS.API.ERROR_OCCURRED, 'File cleanup:', unlinkError);
-        }
-      }
+    
 
    console.error(DEV_LOGS.API.ERROR_OCCURRED, 'Registration:', error);
      console.error('❌ ERREUR COMPLETE:', error.message);     // ← AJOUTE CES 2 LIGNES
@@ -473,7 +450,7 @@ router.post('/complete-provider-profile',
     body('workingAreas').notEmpty().withMessage('אזורי עבודה נדרשים')
   ],
   async (req, res) => {
-    let uploadedFilePath = null;
+   
     
     try {
       // Vérifier que c'est un provider
