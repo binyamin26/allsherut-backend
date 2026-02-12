@@ -10,10 +10,11 @@ class SubscriptionCronService {
       console.log('[CRON] Vérification des abonnements - ' + new Date().toISOString());
       
       try {
-        await this.checkExpiringSubscriptions();
-        await this.checkExpiredSubscriptions();
-        await this.deleteScheduledAccounts(); // ✅ NOUVEAU
-        await this.processAutoRenewals();
+        // DÉSACTIVÉ - Service gratuit pour l'instant
+        // await this.checkExpiringSubscriptions();
+        // await this.checkExpiredSubscriptions();
+        await this.deleteScheduledAccounts();
+        // await this.processAutoRenewals();
         
       } catch (error) {
         console.error('[CRON] Erreur:', error);
