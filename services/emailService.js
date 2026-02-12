@@ -43,13 +43,13 @@ class EmailService {
           <div style="background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%); padding: 28px 40px;">
             <table cellpadding="0" cellspacing="0" border="0" width="100%" style="direction: rtl;">
               <tr>
-                <td style="width: 100px; vertical-align: middle;">
-                  <img src="${this.logoUrl}" alt="AllSherut" style="width: 90px; height: 90px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.3); display: block;" />
-                </td>
-                <td style="vertical-align: middle; padding-right: 18px;">
+                <td style="vertical-align: middle; text-align: right;">
                   <div style="font-size: 28px; font-weight: 800; color: white; margin-bottom: 4px; letter-spacing: 0.5px;">AllSherut</div>
                   <div style="font-size: 14px; color: rgba(255,255,255,0.85);">שירותי בית מקצועיים</div>
                   ${subtitle ? `<div style="margin-top: 8px; display: inline-block; background: rgba(255,255,255,0.2); padding: 5px 16px; border-radius: 20px; font-size: 13px; color: white; font-weight: 600;">${subtitle}</div>` : ''}
+                </td>
+                <td style="width: 110px; vertical-align: middle; text-align: left;">
+                  <img src="${this.logoUrl}" alt="AllSherut" style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.3); display: block;" />
                 </td>
               </tr>
             </table>
@@ -63,12 +63,12 @@ class EmailService {
           <div style="background: #f8fafc; padding: 20px 40px; border-top: 1px solid #e2e8f0;">
             <table cellpadding="0" cellspacing="0" border="0" width="100%" style="direction: rtl;">
               <tr>
-                <td style="width: 44px; vertical-align: middle;">
-                  <img src="${this.logoUrl}" alt="AllSherut" style="width: 40px; height: 40px; border-radius: 50%; opacity: 0.7; display: block;" />
-                </td>
-                <td style="vertical-align: middle; padding-right: 12px;">
+                <td style="vertical-align: middle; text-align: right;">
                   <p style="margin: 0 0 2px 0; font-size: 13px; color: #64748b; font-weight: 600;">AllSherut - שירותי בית מקצועיים</p>
                   <p style="margin: 0; font-size: 12px; color: #94a3b8;">support@homesherut.co.il</p>
+                </td>
+                <td style="width: 50px; vertical-align: middle; text-align: left;">
+                  <img src="${this.logoUrl}" alt="AllSherut" style="width: 40px; height: 40px; border-radius: 50%; opacity: 0.7; display: block;" />
                 </td>
               </tr>
             </table>
