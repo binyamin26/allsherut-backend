@@ -39,12 +39,20 @@ class EmailService {
       </head>
       <body style="font-family: 'Heebo', Arial, sans-serif; background: #f8fafc; margin: 0; padding: 20px; direction: rtl;">
         <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 30px rgba(99,102,241,0.12);">
-          <!-- Header avec logo -->
-          <div style="background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%); padding: 35px 40px; text-align: center;">
-            <img src="${this.logoUrl}" alt="AllSherut" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 12px; border: 3px solid rgba(255,255,255,0.3);" />
-            <div style="font-size: 26px; font-weight: 800; color: white; margin-bottom: 4px; letter-spacing: 0.5px;">AllSherut</div>
-            <div style="font-size: 14px; color: rgba(255,255,255,0.85);">שירותי בית מקצועיים</div>
-            ${subtitle ? `<div style="margin-top: 10px; display: inline-block; background: rgba(255,255,255,0.2); padding: 6px 18px; border-radius: 20px; font-size: 14px; color: white; font-weight: 600;">${subtitle}</div>` : ''}
+          <!-- Header avec logo à côté du texte -->
+          <div style="background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%); padding: 28px 40px;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="direction: rtl;">
+              <tr>
+                <td style="width: 100px; vertical-align: middle;">
+                  <img src="${this.logoUrl}" alt="AllSherut" style="width: 90px; height: 90px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.3); display: block;" />
+                </td>
+                <td style="vertical-align: middle; padding-right: 18px;">
+                  <div style="font-size: 28px; font-weight: 800; color: white; margin-bottom: 4px; letter-spacing: 0.5px;">AllSherut</div>
+                  <div style="font-size: 14px; color: rgba(255,255,255,0.85);">שירותי בית מקצועיים</div>
+                  ${subtitle ? `<div style="margin-top: 8px; display: inline-block; background: rgba(255,255,255,0.2); padding: 5px 16px; border-radius: 20px; font-size: 13px; color: white; font-weight: 600;">${subtitle}</div>` : ''}
+                </td>
+              </tr>
+            </table>
           </div>
     `;
   }
@@ -52,10 +60,18 @@ class EmailService {
   getEmailFooter() {
     return `
           <!-- Footer -->
-          <div style="background: #f8fafc; padding: 25px 40px; text-align: center; border-top: 1px solid #e2e8f0;">
-            <img src="${this.logoUrl}" alt="AllSherut" style="width: 36px; height: 36px; border-radius: 50%; margin-bottom: 8px; opacity: 0.7;" />
-            <p style="margin: 0 0 4px 0; font-size: 13px; color: #64748b; font-weight: 600;">AllSherut - שירותי בית מקצועיים</p>
-            <p style="margin: 0; font-size: 12px; color: #94a3b8;">support@homesherut.co.il | 058-329-0896</p>
+          <div style="background: #f8fafc; padding: 20px 40px; border-top: 1px solid #e2e8f0;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="direction: rtl;">
+              <tr>
+                <td style="width: 44px; vertical-align: middle;">
+                  <img src="${this.logoUrl}" alt="AllSherut" style="width: 40px; height: 40px; border-radius: 50%; opacity: 0.7; display: block;" />
+                </td>
+                <td style="vertical-align: middle; padding-right: 12px;">
+                  <p style="margin: 0 0 2px 0; font-size: 13px; color: #64748b; font-weight: 600;">AllSherut - שירותי בית מקצועיים</p>
+                  <p style="margin: 0; font-size: 12px; color: #94a3b8;">support@homesherut.co.il</p>
+                </td>
+              </tr>
+            </table>
           </div>
         </div>
       </body>
@@ -105,21 +121,21 @@ class EmailService {
     const serviceNames = {
       'cleaning': 'ניקיון', 'gardening': 'גינון', 'babysitting': 'בייביסיטר',
       'petcare': 'שמירת חיות', 'tutoring': 'שיעורים פרטיים', 'eldercare': 'עזרה לקשישים',
-      'laundry': 'כביסה', 'property-management': 'ניהול דירות', 'electrician': 'חשמלאי',
-      'plumbing': 'אינסטלציה', 'air-conditioning': 'מיזוג אוויר', 'gas-technician': 'טכנאי גז',
-      'drywall': 'גבס', 'carpentry': 'נגרות', 'home-organization': 'סידור בית',
-      'event-entertainment': 'אירועים', 'private-chef': 'שף פרטי', 'painting': 'צביעה',
+      'laundry': 'כביסה', 'property-management': 'ניהול דירות', 'propertymanagement': 'ניהול דירות', 'electrician': 'חשמלאי',
+      'plumbing': 'אינסטלציה', 'air-conditioning': 'מיזוג אוויר', 'airconditioning': 'מיזוג אוויר', 'gas-technician': 'טכנאי גז', 'gastechnician': 'טכנאי גז',
+      'drywall': 'גבס', 'carpentry': 'נגרות', 'home-organization': 'סידור בית', 'homeorganization': 'סידור בית',
+      'event-entertainment': 'אירועים', 'evententertainment': 'אירועים', 'private-chef': 'שף פרטי', 'privatechef': 'שף פרטי', 'painting': 'צביעה',
       'waterproofing': 'איטום', 'contractor': 'קבלן', 'aluminum': 'אלומיניום',
-      'glass-works': 'זגגות', 'locksmith': 'מנעולן'
+      'glass-works': 'זגגות', 'glassworks': 'זגגות', 'locksmith': 'מנעולן'
     };
-    const serviceName = serviceNames[serviceType] || 'שירות';
+    const serviceName = serviceNames[serviceType] || '';
 
     return `
       ${this.getEmailHeader('⭐ השארת ביקורת ודירוג')}
           <div style="padding: 40px; direction: rtl;">
-            <div style="text-align: center; margin-bottom: 20px;">
+            ${serviceName ? `<div style="text-align: center; margin-bottom: 20px;">
               <span style="display: inline-block; background: linear-gradient(135deg, #14b8a6, #0d9488); color: white; padding: 6px 18px; border-radius: 20px; font-size: 13px; font-weight: 700;">שירותי ${serviceName}</span>
-            </div>
+            </div>` : ''}
             
             <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 22px; text-align: right;">שלום ${userName},</h2>
             
@@ -155,14 +171,14 @@ class EmailService {
     const serviceNames = {
       'cleaning': 'ניקיון', 'gardening': 'גינון', 'babysitting': 'בייביסיטר',
       'petcare': 'שמירת חיות', 'tutoring': 'שיעורים פרטיים', 'eldercare': 'עזרה לקשישים',
-      'laundry': 'כביסה', 'property-management': 'ניהול דירות', 'electrician': 'חשמלאי',
-      'plumbing': 'אינסטלציה', 'air-conditioning': 'מיזוג אוויר', 'gas-technician': 'טכנאי גז',
-      'drywall': 'גבס', 'carpentry': 'נגרות', 'home-organization': 'סידור בית',
-      'event-entertainment': 'אירועים', 'private-chef': 'שף פרטי', 'painting': 'צביעה',
+      'laundry': 'כביסה', 'property-management': 'ניהול דירות', 'propertymanagement': 'ניהול דירות', 'electrician': 'חשמלאי',
+      'plumbing': 'אינסטלציה', 'air-conditioning': 'מיזוג אוויר', 'airconditioning': 'מיזוג אוויר', 'gas-technician': 'טכנאי גז', 'gastechnician': 'טכנאי גז',
+      'drywall': 'גבס', 'carpentry': 'נגרות', 'home-organization': 'סידור בית', 'homeorganization': 'סידור בית',
+      'event-entertainment': 'אירועים', 'evententertainment': 'אירועים', 'private-chef': 'שף פרטי', 'privatechef': 'שף פרטי', 'painting': 'צביעה',
       'waterproofing': 'איטום', 'contractor': 'קבלן', 'aluminum': 'אלומיניום',
-      'glass-works': 'זגגות', 'locksmith': 'מנעולן'
+      'glass-works': 'זגגות', 'glassworks': 'זגגות', 'locksmith': 'מנעולן'
     };
-    const serviceName = serviceNames[serviceType] || 'שירות';
+    const serviceName = serviceNames[serviceType] || '';
 
     return `
       ${this.getEmailHeader('🎉 תודה על הביקורת!')}
@@ -172,7 +188,7 @@ class EmailService {
             <div style="background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); border: 2px solid #14b8a6; border-radius: 16px; padding: 30px; text-align: center; margin: 25px 0;">
               <div style="font-size: 48px; margin-bottom: 12px;">✅</div>
               <h3 style="color: #0d9488; margin: 0 0 8px 0; font-size: 20px;">הביקורת נשלחה בהצלחה!</h3>
-              <p style="color: #0d9488; margin: 0; font-size: 15px;">הביקורת שלך על שירותי ${serviceName} פורסמה באתר</p>
+              <p style="color: #0d9488; margin: 0; font-size: 15px;">הביקורת שלך${serviceName ? ` על שירותי ${serviceName}` : ''} פורסמה באתר</p>
             </div>
             
             <p style="font-size: 16px; line-height: 1.7; color: #334155; margin-bottom: 20px; text-align: right;">
@@ -198,14 +214,14 @@ class EmailService {
     const serviceNames = {
       'cleaning': 'ניקיון', 'gardening': 'גינון', 'babysitting': 'בייביסיטר',
       'petcare': 'שמירת חיות', 'tutoring': 'שיעורים פרטיים', 'eldercare': 'עזרה לקשישים',
-      'laundry': 'כביסה', 'property-management': 'ניהול דירות', 'electrician': 'חשמלאי',
-      'plumbing': 'אינסטלציה', 'air-conditioning': 'מיזוג אוויר', 'gas-technician': 'טכנאי גז',
-      'drywall': 'גבס', 'carpentry': 'נגרות', 'home-organization': 'סידור בית',
-      'event-entertainment': 'אירועים', 'private-chef': 'שף פרטי', 'painting': 'צביעה',
+      'laundry': 'כביסה', 'property-management': 'ניהול דירות', 'propertymanagement': 'ניהול דירות', 'electrician': 'חשמלאי',
+      'plumbing': 'אינסטלציה', 'air-conditioning': 'מיזוג אוויר', 'airconditioning': 'מיזוג אוויר', 'gas-technician': 'טכנאי גז', 'gastechnician': 'טכנאי גז',
+      'drywall': 'גבס', 'carpentry': 'נגרות', 'home-organization': 'סידור בית', 'homeorganization': 'סידור בית',
+      'event-entertainment': 'אירועים', 'evententertainment': 'אירועים', 'private-chef': 'שף פרטי', 'privatechef': 'שף פרטי', 'painting': 'צביעה',
       'waterproofing': 'איטום', 'contractor': 'קבלן', 'aluminum': 'אלומיניום',
-      'glass-works': 'זגגות', 'locksmith': 'מנעולן'
+      'glass-works': 'זגגות', 'glassworks': 'זגגות', 'locksmith': 'מנעולן'
     };
-    const serviceName = serviceNames[serviceType] || 'שירות';
+    const serviceName = serviceNames[serviceType] || '';
     const starsDisplay = '★'.repeat(rating) + '☆'.repeat(5 - rating);
 
     return `
@@ -216,7 +232,7 @@ class EmailService {
             <div style="background: #eef2ff; border: 2px solid #6366f1; border-radius: 16px; padding: 22px; margin: 20px 0; text-align: right;">
               <h3 style="margin: 0 0 10px 0; color: #4f46e5; font-size: 17px;">📋 ביקורת חדשה על השירות שלך</h3>
               <p style="margin: 0; font-size: 15px; color: #334155;">
-                לקוח השאיר ביקורת על <strong>"${providerTitle}"</strong> - שירותי ${serviceName}.
+                לקוח השאיר ביקורת על <strong>"${providerTitle}"</strong>${serviceName ? ` - שירותי ${serviceName}` : ''}.
               </p>
             </div>
             
