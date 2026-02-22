@@ -233,6 +233,117 @@ router.delete('/profile-image', authenticateToken, async (req, res) => {
 });
 
 // ============================================
+// POST /api/upload/gallery-image
+// ============================================
+router.post('/gallery-image', authenticateToken, upload.single('galleryImage'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.error(ErrorHandler.CODES.REQUIRED_FIELD, 'לא נבחר קובץ');
+    }
+
+    const { query } = require('../config/database');
+    const serviceType = req.body.serviceType || req.user.service_type;
+
+    // Récupérer la galerie actuelle
+    const result = await query(
+      'SELECT profile_images FROM service_providers WHERE user_id = ? AND service_type = ?',
+      [req.user.id, serviceType]
+    );
+
+    if (!result[0]) {
+      return res.notFound('provider');
+    }
+
+    let gallery = [];
+    try {
+      gallery = result[0].profile_images ? JSON.parse(result[0].profile_images) : [];
+    } catch (e) {
+      gallery = [];
+    }
+
+    if (gallery.length >= 6) {
+      return res.error(400, 'מקסימום 6 תמונות בגלריה');
+    }
+
+    // Upload vers Cloudinary dans un dossier gallery
+    const uploadGallery = (buffer, userId, serviceType) => new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'homesherut/gallery',
+          public_id: `gallery-${userId}-${serviceType}-${Date.now()}`,
+          resource_type: 'image',
+          transformation: [
+            { width: 800, height: 600, crop: 'fill' },
+            { quality: 'auto', fetch_format: 'auto' }
+          ]
+        },
+        (error, result) => { if (error) reject(error); else resolve(result); }
+      );
+      stream.end(buffer);
+    });
+
+    const cloudinaryResult = await uploadGallery(req.file.buffer, req.user.id, serviceType);
+    gallery.push(cloudinaryResult.secure_url);
+
+    await query(
+      'UPDATE service_providers SET profile_images = ? WHERE user_id = ? AND service_type = ?',
+      [JSON.stringify(gallery), req.user.id, serviceType]
+    );
+
+    return res.created('תמונה הועלתה לגלריה', { gallery });
+
+  } catch (error) {
+    console.error('Gallery upload error:', error);
+    return res.serverError(error);
+  }
+});
+
+// ============================================
+// DELETE /api/upload/gallery-image
+// ============================================
+router.delete('/gallery-image', authenticateToken, async (req, res) => {
+  try {
+    const { query } = require('../config/database');
+    const { serviceType, imageUrl } = req.body;
+    const svcType = serviceType || req.user.service_type;
+
+    if (!imageUrl) {
+      return res.error(400, 'כתובת תמונה נדרשת');
+    }
+
+    const result = await query(
+      'SELECT profile_images FROM service_providers WHERE user_id = ? AND service_type = ?',
+      [req.user.id, svcType]
+    );
+
+    if (!result[0]) return res.notFound('provider');
+
+    let gallery = [];
+    try {
+      gallery = result[0].profile_images ? JSON.parse(result[0].profile_images) : [];
+    } catch (e) { gallery = []; }
+
+    // Supprimer de Cloudinary
+    if (imageUrl.includes('cloudinary')) {
+      await deleteFromCloudinary(imageUrl);
+    }
+
+    gallery = gallery.filter(url => url !== imageUrl);
+
+    await query(
+      'UPDATE service_providers SET profile_images = ? WHERE user_id = ? AND service_type = ?',
+      [JSON.stringify(gallery), req.user.id, svcType]
+    );
+
+    return res.success('תמונה נמחקה מהגלריה', { gallery });
+
+  } catch (error) {
+    console.error('Gallery delete error:', error);
+    return res.serverError(error);
+  }
+});
+
+// ============================================
 // GET /api/upload/test
 // ============================================
 router.get('/test', (req, res) => {
