@@ -620,7 +620,7 @@ return {
       };
 
     } catch (error) {
-      console.error('שגיאה בטעינת ביקורות לדשבורד:', error);
+      console.error('שגיאה בטעינת ביקורות לאזור אישי:', error);
       return { success: false, message: 'שגיאה בטעינת הביקורות' };
     }
   }

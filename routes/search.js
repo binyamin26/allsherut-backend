@@ -314,15 +314,15 @@ const validServices = ['babysitting', 'cleaning', 'gardening', 'petcare', 'tutor
   console.log(DEV_LOGS.API.REQUEST_RECEIVED, `Filtre service: ${service}`);
 }
 
-    if (city) {
-      whereConditions.push(`sp.location_city LIKE ?`);
-      params.push(`%${city}%`);
-    }
+   if (city) {
+  whereConditions.push(`EXISTS (SELECT 1 FROM provider_working_areas pwa WHERE pwa.provider_id = sp.id AND pwa.city LIKE ?)`);
+  params.push(`%${city}%`);
+}
 
-    if (neighborhood) {
-      whereConditions.push(`sp.location_area LIKE ?`);
-      params.push(`%${neighborhood}%`);
-    }
+if (neighborhood) {
+  whereConditions.push(`EXISTS (SELECT 1 FROM provider_working_areas pwa WHERE pwa.provider_id = sp.id AND pwa.neighborhood LIKE ?)`);
+  params.push(`%${neighborhood}%`);
+}
 
     if (minPrice && !isNaN(parseFloat(minPrice))) {
       whereConditions.push(`sp.hourly_rate >= ?`);

@@ -251,9 +251,9 @@ class EmailService {
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
-              <p style="color: #334155; font-size: 15px; margin-bottom: 16px;">תוכל להגיב על הביקורת מהדשבורד שלך</p>
+              <p style="color: #334155; font-size: 15px; margin-bottom: 16px;">תוכל להגיב על הביקורת מהאזור אישי שלך</p>
               <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%); color: white; padding: 14px 36px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(99,102,241,0.3);">
-                עבור לדשבורד שלך
+                עבור לאזור אישי שלך
               </a>
             </div>
             
