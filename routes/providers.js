@@ -442,6 +442,7 @@ router.get('/:id', async (req, res) => {
     u.phone,
     u.premium_until,
     sp.profile_image as provider_profile_image,
+    sp.profile_images as provider_gallery_images,
 u.profile_image as user_profile_image,
     u.is_active as user_active,
     
@@ -596,7 +597,11 @@ serviceDetails: {
       // Médias
      media: {
   profileImage: providerData.provider_profile_image || providerData.user_profile_image,
-  gallery: []
+ gallery: (() => {
+  const raw = providerData.provider_gallery_images;
+  if (!raw) return [];
+  try { return typeof raw === 'object' ? raw : JSON.parse(raw); } catch { return []; }
+})()
 }
     };
 
