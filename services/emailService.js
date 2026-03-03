@@ -29,22 +29,22 @@ class EmailService {
   // HEADER & FOOTER COMMUNS
   // ============================================
 
-  getEmailHeader(subtitle = '') {
-    return `
-      <!DOCTYPE html>
-      <html dir="rtl" lang="he">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="font-family: 'Heebo', Arial, sans-serif; background: #f8fafc; margin: 0; padding: 20px; direction: rtl;">
-        <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 30px rgba(99,102,241,0.12);">
-        <div style="text-align: center;">
-  <img src="${this.logoUrl}" alt="AllSherut" style="width: 110px; height: 110px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.3); display: inline-block; object-fit: contain;" />
-  ${subtitle ? `<div style="margin-top: 10px; display: inline-block; background: rgba(255,255,255,0.2); padding: 5px 16px; border-radius: 20px; font-size: 13px; color: white; font-weight: 600;">${subtitle}</div>` : ''}
-</div>
-    `;
-  }
+ getEmailHeader(subtitle = '') {
+  return `
+    <!DOCTYPE html>
+    <html dir="rtl" lang="he">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: 'Heebo', Arial, sans-serif; background: #f8fafc; margin: 0; padding: 20px; direction: rtl;">
+      <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 30px rgba(99,102,241,0.12);">
+        <div style="background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%); padding: 28px 40px; text-align: center;">
+          <img src="${this.logoUrl}" alt="AllSherut" style="width: 110px; height: 110px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.3); display: inline-block; object-fit: contain;" />
+          ${subtitle ? `<div style="margin-top: 10px; display: inline-block; background: rgba(255,255,255,0.2); padding: 5px 16px; border-radius: 20px; font-size: 13px; color: white; font-weight: 600;">${subtitle}</div>` : ''}
+        </div>
+  `;
+}
 
   getEmailFooter() {
     return `
