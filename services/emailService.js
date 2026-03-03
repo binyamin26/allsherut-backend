@@ -39,10 +39,9 @@ class EmailService {
       </head>
       <body style="font-family: 'Heebo', Arial, sans-serif; background: #f8fafc; margin: 0; padding: 20px; direction: rtl;">
         <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 30px rgba(99,102,241,0.12);">
-          <!-- Header avec logo à côté du texte -->
-         <div style="text-align: center; padding: 8px 0;">
-  <img src="${this.logoUrl}" alt="AllSherut" style="width: 120px; height: 120px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.3); display: inline-block;" />
-  ${subtitle ? `<div style="margin-top: 12px; display: inline-block; background: rgba(255,255,255,0.2); padding: 5px 16px; border-radius: 20px; font-size: 13px; color: white; font-weight: 600;">${subtitle}</div>` : ''}
+        <div style="text-align: center;">
+  <img src="${this.logoUrl}" alt="AllSherut" style="width: 110px; height: 110px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.3); display: inline-block; object-fit: contain;" />
+  ${subtitle ? `<div style="margin-top: 10px; display: inline-block; background: rgba(255,255,255,0.2); padding: 5px 16px; border-radius: 20px; font-size: 13px; color: white; font-weight: 600;">${subtitle}</div>` : ''}
 </div>
     `;
   }
@@ -120,9 +119,7 @@ class EmailService {
     };
     const serviceName = serviceNames[serviceType] || '';
 
-    return `
-      ${this.getEmailHeader('⭐ השארת ביקורת ודירוג')}
-          <div style="padding: 40px; direction: rtl;">
+    return `          <div style="padding: 40px; direction: rtl;">
             ${serviceName ? `<div style="text-align: center; margin-bottom: 20px;">
               <span style="display: inline-block; background: linear-gradient(135deg, #14b8a6, #0d9488); color: white; padding: 6px 18px; border-radius: 20px; font-size: 13px; font-weight: 700;">שירותי ${serviceName}</span>
             </div>` : ''}
