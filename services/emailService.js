@@ -42,7 +42,7 @@ class EmailService {
           <!-- Header avec logo à côté du texte -->
           <div style="background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%); padding: 28px 40px;">
            <div style="background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%); padding: 28px 40px; text-align: center;">
-  <img src="${this.logoUrl}" alt="AllSherut" style="width: 220px; height: auto; display: inline-block; border-radius: 16px" />
+  <img src="${this.logoUrl}" alt="AllSherut" style="width: 220px; height: auto; display: inline-block; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
 </div>
           </div>
     `;
