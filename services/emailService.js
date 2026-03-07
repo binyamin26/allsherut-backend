@@ -18,7 +18,7 @@ class EmailService {
   });
 
   // Logo Cloudinary
-  this.logoUrl = 'https://res.cloudinary.com/ddzskq7hd/image/upload/v1770758706/Logo_moderne_d_AllSherut_avec_sph%C3%A8re_3D_ycuw9s.png';
+  this.logoUrl = 'logo_transparent_z2dfyz';
 }
 
   generateResetToken() {
