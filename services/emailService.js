@@ -18,7 +18,7 @@ class EmailService {
   });
 
   // Logo Cloudinary
-  this.logoUrl = 'logo_transparent_z2dfyz';
+  this.logoUrl = 'https://res.cloudinary.com/ddzskq7hd/image/upload/logo_transparent_z2dfyz.png';
 }
 
   generateResetToken() {
