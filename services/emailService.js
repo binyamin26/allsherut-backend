@@ -52,17 +52,6 @@ this.logoUrl = 'https://res.cloudinary.com/ddzskq7hd/image/upload/b_white,r_20/l
     return `
           <!-- Footer -->
           <div style="background: #f8fafc; padding: 20px 40px; border-top: 1px solid #e2e8f0;">
-            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="direction: rtl;">
-              <tr>
-                <td style="vertical-align: middle; text-align: right;">
-                  <p style="margin: 0 0 2px 0; font-size: 13px; color: #64748b; font-weight: 600;">AllSherut - שירותי בית מקצועיים</p>
-                  <p style="margin: 0; font-size: 12px; color: #94a3b8;">support@homesherut.co.il</p>
-                </td>
-                <td style="width: 50px; vertical-align: middle; text-align: left;">
-                  <img src="${this.logoUrl}" alt="AllSherut" style="width: 40px; height: 40px; border-radius: 50%; opacity: 0.7; display: block;" />
-                </td>
-              </tr>
-            </table>
           </div>
         </div>
       </body>
