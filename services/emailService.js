@@ -40,9 +40,10 @@ this.logoUrl = 'https://res.cloudinary.com/ddzskq7hd/image/upload/Logo_moderne_d
       <body style="font-family: 'Heebo', Arial, sans-serif; background: #f8fafc; margin: 0; padding: 20px; direction: rtl;">
         <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 30px rgba(99,102,241,0.12);">
           <!-- Header avec logo à côté du texte -->
-          <div style="background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%); padding: 28px 40px;">
-   <div style="text-align: center; padding: 28px 40px;">
-  <img src="${this.logoUrl}" alt="AllSherut" style="width: 200px; height: auto; display: inline-block;" />
+    <div style="text-align: center; padding: 28px 40px;">
+  <div style="display: inline-block; background: rgba(255,255,255,0.15); border-radius: 16px; padding: 12px 24px;">
+    <img src="${this.logoUrl}" alt="AllSherut" style="width: 220px; height: auto; display: block;" />
+  </div>
 </div>
           </div>
     `;
