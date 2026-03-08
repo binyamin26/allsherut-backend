@@ -20,6 +20,11 @@ if (process.env.JWT_SECRET.length < 32) {
   process.exit(1);
 }
 
+// ⚠️ Warning ENCRYPTION_KEY manquante
+if (!process.env.ENCRYPTION_KEY) {
+  console.warn('⚠️ ATTENTION : ENCRYPTION_KEY non définie - les emails dans trial_history ne seront pas chiffrés');
+}
+
 const config = {
   // Configuration base de données
   database: {

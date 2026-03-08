@@ -64,8 +64,6 @@ class SubscriptionCronService {
   async checkExpiredSubscriptions() {
     // (code existant inchangé)
     const now = new Date();
-
-    console.log('[DEBUG] Recherche utilisateurs expirés avec NOW() =', now);
     const expired = await query(`
       SELECT id, email, first_name 
       FROM users 
@@ -74,11 +72,6 @@ class SubscriptionCronService {
       AND subscription_status != 'expired'
       AND is_active = 1
     `, [now]);
-    
-    console.log(`[DEBUG] ${expired.length} utilisateurs trouvés`);
-    if (expired.length === 0) {
-      console.log('[DEBUG] Aucun utilisateur expiré trouvé');
-    }
     
     for (const user of expired) {
       await query(`

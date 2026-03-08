@@ -38,8 +38,10 @@ const upload = multer({
 // ============================================
 // Helper : Upload buffer vers Cloudinary
 // ============================================
+const CLOUDINARY_TIMEOUT_MS = 30000;
+
 const uploadToCloudinary = (fileBuffer, userId, serviceType) => {
-  return new Promise((resolve, reject) => {
+  const uploadPromise = new Promise((resolve, reject) => {
     const folder = 'homesherut/profiles';
     const publicId = `profile-${userId}-${serviceType}-${Date.now()}`;
 
@@ -61,6 +63,12 @@ const uploadToCloudinary = (fileBuffer, userId, serviceType) => {
 
     uploadStream.end(fileBuffer);
   });
+
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Cloudinary upload timeout (30s)')), CLOUDINARY_TIMEOUT_MS)
+  );
+
+  return Promise.race([uploadPromise, timeoutPromise]);
 };
 
 // ============================================
@@ -266,21 +274,27 @@ router.post('/gallery-image', authenticateToken, upload.single('galleryImage'), 
     }
 
     // Upload vers Cloudinary dans un dossier gallery
-    const uploadGallery = (buffer, userId, serviceType) => new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder: 'homesherut/gallery',
-          public_id: `gallery-${userId}-${serviceType}-${Date.now()}`,
-          resource_type: 'image',
-          transformation: [
-            { width: 800, height: 600, crop: 'fill' },
-            { quality: 'auto', fetch_format: 'auto' }
-          ]
-        },
-        (error, result) => { if (error) reject(error); else resolve(result); }
+    const uploadGallery = (buffer, userId, serviceType) => {
+      const uploadPromise = new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'homesherut/gallery',
+            public_id: `gallery-${userId}-${serviceType}-${Date.now()}`,
+            resource_type: 'image',
+            transformation: [
+              { width: 800, height: 600, crop: 'fill' },
+              { quality: 'auto', fetch_format: 'auto' }
+            ]
+          },
+          (error, result) => { if (error) reject(error); else resolve(result); }
+        );
+        stream.end(buffer);
+      });
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Cloudinary upload timeout (30s)')), CLOUDINARY_TIMEOUT_MS)
       );
-      stream.end(buffer);
-    });
+      return Promise.race([uploadPromise, timeoutPromise]);
+    };
 
     const cloudinaryResult = await uploadGallery(req.file.buffer, req.user.id, serviceType);
     gallery.push(cloudinaryResult.secure_url);

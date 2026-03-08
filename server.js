@@ -125,14 +125,6 @@ app.get('/api/placeholder/:width/:height', (req, res) => {
   res.redirect(302, imageUrl);
 });
 
-// CORS headers globaux pour les images
-app.use((req, res, next) => {
-  if (req.path.startsWith('/uploads/')) {
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
-  }
-  next();
-});
 
 // =============================================
 // ROUTES PUBLIQUES (sans vérification d'abonnement)
@@ -173,12 +165,6 @@ app.use('/api/reviews',
 
 // Gestion utilisateurs
 app.use('/api/users', require('./routes/users'));
-
-   // Route racine pour vérifier que le serveur est actif
-app.get('/', (req, res) => {
-  res.json({ success: true, message: '🚀 Backend HomeSherut is running!' });
-});
-
 
 // Upload avec rate limiting spécifique
 const uploadLimiter = rateLimit({

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Subscription = require('../models/Subscription');
 const User = require('../models/User');
-const { authenticateToken, requireProviderRole } = require('../middleware/authMiddleware');
+const { authenticateToken } = require('../middleware/authMiddleware');
 const { query } = require('../config/database');
 const emailService = require('../services/emailService'); // ✅ NOUVEAU
 

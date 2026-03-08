@@ -305,10 +305,6 @@ router.get('/:id/reviews', async (req, res) => {
       return res.status(statusCode).json(errorResponse);
     }
 
-    // DEBUG - Version simplifiée pour identifier le problème
-    console.log('DEBUG - providerId:', providerId, 'type:', typeof providerId);
-    console.log('DEBUG - limit:', limit, 'type:', typeof limit);
-    console.log('DEBUG - offset:', offset, 'type:', typeof offset);
 
     const reviewsQuery = `
       SELECT 
@@ -471,11 +467,6 @@ u.profile_image as user_profile_image,
     }
 
     const providerData = provider[0];
-    console.log('🔍 DEBUG IMAGE:', {
-  provider_profile_image: providerData.provider_profile_image,
-  user_profile_image: providerData.user_profile_image,
-  profile_image: providerData.profile_image
-});
 
     // Récupération des zones de travail avec le BON provider_id
     const workingAreasQuery = `
@@ -605,7 +596,6 @@ serviceDetails: {
 }
     };
 
-    console.log('🔍 DEBUG MEDIA ENVOYÉ:', formattedProvider.media);
 
     console.log(DEV_LOGS.API.RESPONSE_SENT, `Provider ${providerId} complete profile loaded successfully`);
 
