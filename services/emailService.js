@@ -40,7 +40,7 @@ getEmailHeader(subtitle = '') {
     <body style="font-family: 'Heebo', Arial, sans-serif; background: #f8fafc; margin: 0; padding: 20px; direction: rtl;">
       <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 30px rgba(99,102,241,0.12);">
         <div style="background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%); padding: 28px 40px; text-align: center;">
-          <div style="display: inline-block; background: rgba(255,255,255,0.25); border-radius: 16px; padding: 14px 28px;">
+  <div style="display: inline-block; background: white; border-radius: 16px; padding: 14px 28px;">
   <img src="${this.logoUrl}" alt="AllSherut" style="width: 260px; height: auto; display: block;" />
 </div>
         </div>
