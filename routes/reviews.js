@@ -1,9 +1,18 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const { query } = require('../config/database');
 const emailService = require('../services/emailService');
 const Review = require('../models/Review');
 const jwt = require('jsonwebtoken');
+
+const reviewVerificationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 heure
+  max: 10,
+  message: { success: false, message: 'יותר מדי בקשות אימות. נסה שוב בעוד שעה' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 // =============================================
 // MIDDLEWARE D'AUTHENTIFICATION
@@ -43,7 +52,7 @@ function generateVerificationCode() {
 // =============================================
 
 // ROUTE 1: ENVOYER CODE DE VÉRIFICATION
-router.post('/send-verification', async (req, res) => {
+router.post('/send-verification', reviewVerificationLimiter, async (req, res) => {
   try {
     console.log('📧 Demande code vérification avis');
     const { name, email, providerId, serviceType } = req.body;

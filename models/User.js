@@ -194,7 +194,6 @@ try {
         );
         
         if (users.length === 0) {
-          console.log('DEBUG: Utilisateur créé mais non trouvé, ID:', userId);
           return null;
         }
         
@@ -1772,9 +1771,6 @@ async getFullProviderProfile() {
     }
 
     const profile = profiles[0];
-    console.log('✅ Profil de base récupéré');
-    console.log('🔍 DEBUG availability_days:', profile.availability_days);
-    console.log('🔍 DEBUG babysitting_types:', profile.babysitting_types);
 
     // 2. Récupérer les zones de travail
     const workingAreas = await query(

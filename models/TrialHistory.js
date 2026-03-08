@@ -108,12 +108,7 @@ static async hasUsedTrialByPhone(phone, serviceType) {
         }
         
         const phoneHash = this.hashName(phone);
-        
-        console.log('🔍 CHECK PHONE TRIAL:');
-        console.log('  Phone reçu:', phone);
-        console.log('  Phone hash:', phoneHash.substring(0, 10) + '...');
-        console.log('  Service demandé:', serviceType);
-        
+
       const sql = `
             SELECT 
                 th.id,
@@ -131,12 +126,7 @@ static async hasUsedTrialByPhone(phone, serviceType) {
         `;
         
         const results = await query(sql, [phoneHash, serviceType]);
-        
-        console.log('  Résultats trouvés:', results.length);
-        if (results.length > 0) {
-            console.log('  ⚠️ Service en conflit:', results[0].service_type);
-        }
-        
+
         if (results.length > 0) {
             return {
                 hasUsedTrial: true,
