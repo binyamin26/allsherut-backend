@@ -17,8 +17,8 @@ class EmailService {
     }
   });
 
-  // Logo Cloudinary
-this.logoUrl = 'https://res.cloudinary.com/ddzskq7hd/image/upload/Logo_moderne_d_AllSherut_avec_sph%C3%A8re_3D-removebg-preview_kbpu8i.png';
+  // Logo — nouveau logo AS (palette bleu marine)
+  this.logoUrl = 'https://allsherut.com/images/logo-homesherut26.png';
 }
 
   generateResetToken() {
@@ -37,12 +37,13 @@ getEmailHeader(subtitle = '') {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
-    <body style="font-family: 'Heebo', Arial, sans-serif; background: #f8fafc; margin: 0; padding: 20px; direction: rtl;">
-      <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 30px rgba(99,102,241,0.12);">
-        <div style="background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%); padding: 28px 40px; text-align: center;">
-<div style="display: inline-block; background: rgba(255,255,255,0.35); border-radius: 16px; padding: 14px 28px;">
-  <img src="${this.logoUrl}" alt="AllSherut" style="width: 260px; height: auto; display: block;" />
-</div>
+    <body style="font-family: 'Heebo', Arial, sans-serif; background: #F5F7FA; margin: 0; padding: 20px; direction: rtl;">
+      <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 30px rgba(15,42,68,0.12);">
+        <div style="background: linear-gradient(135deg, #0F2A44 0%, #1A5490 100%); padding: 28px 40px; text-align: center;">
+          <div style="display: inline-block; background: white; border-radius: 14px; padding: 10px 22px; margin-bottom: ${subtitle ? '14px' : '0'};">
+            <img src="${this.logoUrl}" alt="AllSherut" style="width: 160px; height: auto; display: block;" />
+          </div>
+          ${subtitle ? `<div style="color: rgba(255,255,255,0.95); font-size: 16px; font-weight: 600; font-family: Arial, sans-serif; margin-top: 0;">${subtitle}</div>` : ''}
         </div>
   `;
 }
@@ -50,7 +51,8 @@ getEmailHeader(subtitle = '') {
   getEmailFooter() {
     return `
           <!-- Footer -->
-          <div style="background: #f8fafc; padding: 20px 40px; border-top: 1px solid #e2e8f0;">
+          <div style="background: #F5F7FA; padding: 20px 40px; border-top: 1px solid #e2e8f0; text-align: center;">
+            <p style="margin: 0; color: #94a3b8; font-size: 12px; font-family: Arial, sans-serif;">AllSherut &mdash; כל השירותים במקום אחד</p>
           </div>
         </div>
       </body>
@@ -65,28 +67,28 @@ getEmailHeader(subtitle = '') {
     return `
       ${this.getEmailHeader('🔐 איפוס סיסמה')}
           <div style="padding: 40px; text-align: right; direction: rtl;">
-            <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 22px;">שלום ${userName},</h2>
-            
-            <p style="font-size: 16px; line-height: 1.7; color: #334155; margin-bottom: 25px;">
+            <h2 style="color: #0F2A44; margin: 0 0 20px 0; font-size: 22px;">שלום ${userName},</h2>
+
+            <p style="font-size: 16px; line-height: 1.7; color: #2D3748; margin-bottom: 25px;">
               קיבלנו בקשה לאיפוס הסיסמה של החשבון שלך ב-AllSherut.
               <br>לאיפוס הסיסמה, לחץ על הכפתור למטה:
             </p>
-            
+
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%); color: white; padding: 14px 36px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(99,102,241,0.3);">
+              <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #0F2A44 0%, #2F80ED 100%); color: white; padding: 14px 36px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(47,128,237,0.3);">
                 איפוס סיסמה
               </a>
             </div>
-            
+
             <div style="background: #fef3c7; border-right: 3px solid #f59e0b; color: #92400e; padding: 14px 18px; border-radius: 10px; margin: 25px 0; font-size: 14px;">
               <strong>⚠️ חשוב:</strong> הקישור תקף למשך 24 שעות בלבד. אם לא ביקשת איפוס סיסמה, התעלם מהמייל הזה.
             </div>
-            
+
             <div style="height: 1px; background: #e2e8f0; margin: 25px 0;"></div>
-            
+
             <p style="font-size: 13px; color: #94a3b8;">
               אם הכפתור לא עובד, העתק והדבק את הקישור:
-              <br><a href="${resetUrl}" style="color: #6366f1; word-break: break-all;">${resetUrl}</a>
+              <br><a href="${resetUrl}" style="color: #1A5490; word-break: break-all;">${resetUrl}</a>
             </p>
           </div>
       ${this.getEmailFooter()}
@@ -113,25 +115,25 @@ getEmailHeader(subtitle = '') {
       ${this.getEmailHeader('⭐ השארת ביקורת ודירוג')}
           <div style="padding: 40px; direction: rtl;">
             ${serviceName ? `<div style="text-align: center; margin-bottom: 20px;">
-              <span style="display: inline-block; background: linear-gradient(135deg, #14b8a6, #0d9488); color: white; padding: 6px 18px; border-radius: 20px; font-size: 13px; font-weight: 700;">שירותי ${serviceName}</span>
+              <span style="display: inline-block; background: linear-gradient(135deg, #1A5490, #2F80ED); color: white; padding: 6px 18px; border-radius: 20px; font-size: 13px; font-weight: 700;">שירותי ${serviceName}</span>
             </div>` : ''}
-            
-            <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 22px; text-align: right;">שלום ${userName},</h2>
-            
-            <p style="font-size: 16px; line-height: 1.7; color: #334155; margin-bottom: 25px; text-align: right;">
+
+            <h2 style="color: #0F2A44; margin: 0 0 20px 0; font-size: 22px; text-align: right;">שלום ${userName},</h2>
+
+            <p style="font-size: 16px; line-height: 1.7; color: #2D3748; margin-bottom: 25px; text-align: right;">
               תודה על הרצון להשאיר ביקורת ודירוג!
               <br>כדי להבטיח את איכות הביקורות, אנא השתמש בקוד האימות הבא:
             </p>
-            
-            <div style="background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); border: 2px solid #14b8a6; border-radius: 16px; padding: 28px; text-align: center; margin: 25px 0;">
-              <div style="font-size: 38px; font-weight: 800; color: #0d9488; letter-spacing: 10px; font-family: 'Courier New', monospace;">${verificationCode}</div>
-              <div style="font-size: 13px; color: #0d9488; margin-top: 10px;">קוד אימות תקף ל-15 דקות</div>
+
+            <div style="background: linear-gradient(135deg, #EBF3FE 0%, #C8DFFB 100%); border: 2px solid #2F80ED; border-radius: 16px; padding: 28px; text-align: center; margin: 25px 0;">
+              <div style="font-size: 38px; font-weight: 800; color: #0F2A44; letter-spacing: 10px; font-family: 'Courier New', monospace;">${verificationCode}</div>
+              <div style="font-size: 13px; color: #1A5490; margin-top: 10px;">קוד אימות תקף ל-15 דקות</div>
             </div>
-            
+
             <div style="background: #fef3c7; border-right: 3px solid #f59e0b; color: #92400e; padding: 14px 18px; border-radius: 10px; margin: 20px 0; font-size: 14px;">
               <strong>⚠️ חשוב:</strong> הקוד תקף למשך 15 דקות בלבד. אל תשתף את הקוד עם אחרים.
             </div>
-            
+
             <div style="text-align: center; margin-top: 25px;">
               <p style="color: #64748b; font-size: 14px; line-height: 1.6;">
                 💬 הביקורת שלך תעזור ללקוחות אחרים לקבל החלטה מושכלת
@@ -162,18 +164,18 @@ getEmailHeader(subtitle = '') {
     return `
       ${this.getEmailHeader('🎉 תודה על הביקורת!')}
           <div style="padding: 40px; direction: rtl;">
-            <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 22px; text-align: right;">שלום ${userName},</h2>
-            
-            <div style="background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); border: 2px solid #14b8a6; border-radius: 16px; padding: 30px; text-align: center; margin: 25px 0;">
+            <h2 style="color: #0F2A44; margin: 0 0 20px 0; font-size: 22px; text-align: right;">שלום ${userName},</h2>
+
+            <div style="background: linear-gradient(135deg, #EBF3FE 0%, #C8DFFB 100%); border: 2px solid #2F80ED; border-radius: 16px; padding: 30px; text-align: center; margin: 25px 0;">
               <div style="font-size: 48px; margin-bottom: 12px;">✅</div>
-              <h3 style="color: #0d9488; margin: 0 0 8px 0; font-size: 20px;">הביקורת נשלחה בהצלחה!</h3>
-              <p style="color: #0d9488; margin: 0; font-size: 15px;">הביקורת שלך${serviceName ? ` על שירותי ${serviceName}` : ''} פורסמה באתר</p>
+              <h3 style="color: #0F2A44; margin: 0 0 8px 0; font-size: 20px;">הביקורת נשלחה בהצלחה!</h3>
+              <p style="color: #1A5490; margin: 0; font-size: 15px;">הביקורת שלך${serviceName ? ` על שירותי ${serviceName}` : ''} פורסמה באתר</p>
             </div>
-            
-            <p style="font-size: 16px; line-height: 1.7; color: #334155; margin-bottom: 20px; text-align: right;">
+
+            <p style="font-size: 16px; line-height: 1.7; color: #2D3748; margin-bottom: 20px; text-align: right;">
               תודה רבה על הזמן שהשקעת בכתיבת הביקורת. חוות הדעת שלך חשובה מאוד ותעזור ללקוחות אחרים לקבל החלטות מושכלות.
             </p>
-            
+
             <div style="background: #fffbeb; border-right: 3px solid #f59e0b; padding: 14px 18px; border-radius: 10px; text-align: right;">
               <p style="margin: 0; color: #92400e; font-size: 14px;">
                 💡 הביקורות האמינות שלך עוזרות לשפר את איכות השירותים לכל הקהילה
@@ -189,7 +191,7 @@ getEmailHeader(subtitle = '') {
   // ============================================
   getProviderNewReviewNotificationTemplate(providerData) {
     const { providerName, providerTitle, rating, reviewerName, comment, title, serviceType } = providerData;
-    
+
     const serviceNames = {
       'cleaning': 'ניקיון', 'gardening': 'גינון', 'babysitting': 'בייביסיטר',
       'petcare': 'שמירת חיות', 'tutoring': 'שיעורים פרטיים', 'eldercare': 'עזרה לקשישים',
@@ -206,36 +208,36 @@ getEmailHeader(subtitle = '') {
     return `
       ${this.getEmailHeader('💬 ביקורת חדשה!')}
           <div style="padding: 40px; direction: rtl;">
-            <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 22px; text-align: right;">שלום ${providerName},</h2>
-            
-            <div style="background: #eef2ff; border: 2px solid #6366f1; border-radius: 16px; padding: 22px; margin: 20px 0; text-align: right;">
-              <h3 style="margin: 0 0 10px 0; color: #4f46e5; font-size: 17px;">📋 ביקורת חדשה על השירות שלך</h3>
-              <p style="margin: 0; font-size: 15px; color: #334155;">
+            <h2 style="color: #0F2A44; margin: 0 0 20px 0; font-size: 22px; text-align: right;">שלום ${providerName},</h2>
+
+            <div style="background: #E8EEF5; border: 2px solid #1A5490; border-radius: 16px; padding: 22px; margin: 20px 0; text-align: right;">
+              <h3 style="margin: 0 0 10px 0; color: #0F2A44; font-size: 17px;">📋 ביקורת חדשה על השירות שלך</h3>
+              <p style="margin: 0; font-size: 15px; color: #2D3748;">
                 לקוח השאיר ביקורת על <strong>"${providerTitle}"</strong>${serviceName ? ` - שירותי ${serviceName}` : ''}.
               </p>
             </div>
-            
-            <div style="background: #f8fafc; border-radius: 14px; padding: 20px; margin: 20px 0; border: 1px solid #e2e8f0;">
+
+            <div style="background: #F5F7FA; border-radius: 14px; padding: 20px; margin: 20px 0; border: 1px solid #e2e8f0;">
               <div style="text-align: right; margin-bottom: 12px;">
-                <strong style="color: #334155;">לקוח:</strong> ${reviewerName}
+                <strong style="color: #2D3748;">לקוח:</strong> ${reviewerName}
               </div>
               <div style="margin-bottom: 12px;">
                 <span style="font-size: 22px; color: #f59e0b;">${starsDisplay}</span>
                 <span style="color: #64748b; font-size: 14px; margin-right: 8px;">(${rating}/5)</span>
               </div>
               ${title ? `<div style="margin-bottom: 10px; text-align: right;"><strong>כותרת:</strong> ${title}</div>` : ''}
-              <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; font-style: italic; color: #334155; text-align: right; line-height: 1.6;">
+              <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; font-style: italic; color: #2D3748; text-align: right; line-height: 1.6;">
                 "${comment}"
               </div>
             </div>
-            
+
             <div style="text-align: center; margin: 30px 0;">
-              <p style="color: #334155; font-size: 15px; margin-bottom: 16px;">תוכל להגיב על הביקורת מהאזור אישי שלך</p>
-              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%); color: white; padding: 14px 36px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(99,102,241,0.3);">
+              <p style="color: #2D3748; font-size: 15px; margin-bottom: 16px;">תוכל להגיב על הביקורת מהאזור אישי שלך</p>
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #0F2A44 0%, #2F80ED 100%); color: white; padding: 14px 36px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(47,128,237,0.3);">
                 עבור לאזור אישי שלך
               </a>
             </div>
-            
+
             <div style="background: #fffbeb; border-right: 3px solid #f59e0b; padding: 14px 18px; border-radius: 10px;">
               <p style="margin: 0; color: #92400e; font-size: 13px; text-align: right;">
                 <strong>💡 טיפ:</strong> תגובה מקצועית ואמפתית יכולה להראות ללקוחות עתידיים שאתה אכפת ומשתפר.
@@ -251,20 +253,20 @@ getEmailHeader(subtitle = '') {
   // ============================================
   getWelcomeTemplate(userName, userRole) {
     const roleText = userRole === 'provider' ? 'ספק שירות' : 'לקוח';
-    
+
     return `
       ${this.getEmailHeader('🎉 ברוכים הבאים!')}
           <div style="padding: 40px; direction: rtl;">
-            <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 22px; text-align: right;">שלום ${userName},</h2>
-            
-            <p style="font-size: 16px; line-height: 1.7; color: #334155; margin-bottom: 25px; text-align: right;">
+            <h2 style="color: #0F2A44; margin: 0 0 20px 0; font-size: 22px; text-align: right;">שלום ${userName},</h2>
+
+            <p style="font-size: 16px; line-height: 1.7; color: #2D3748; margin-bottom: 25px; text-align: right;">
               ברוכים הבאים למשפחת AllSherut! אנחנו שמחים שהצטרפת אלינו כ${roleText}.
             </p>
-            
+
             ${userRole === 'provider' ? `
-              <div style="background: #f0fdfa; border-radius: 14px; padding: 22px; margin-bottom: 25px; border: 1px solid #99f6e4;">
-                <h3 style="color: #0d9488; margin: 0 0 12px 0; font-size: 17px; text-align: right;">כספק שירות, אתה יכול עכשיו:</h3>
-                <ul style="text-align: right; color: #334155; line-height: 2; padding-right: 20px; margin: 0;">
+              <div style="background: #EBF3FE; border-radius: 14px; padding: 22px; margin-bottom: 25px; border: 1px solid #91BEF7;">
+                <h3 style="color: #0F2A44; margin: 0 0 12px 0; font-size: 17px; text-align: right;">כספק שירות, אתה יכול עכשיו:</h3>
+                <ul style="text-align: right; color: #2D3748; line-height: 2; padding-right: 20px; margin: 0;">
                   <li>ליצור פרופיל מקצועי משלך</li>
                   <li>לקבל פניות מלקוחות באזור שלך</li>
                   <li>לבנות מוניטין ולקבל ביקורות</li>
@@ -272,9 +274,9 @@ getEmailHeader(subtitle = '') {
                 </ul>
               </div>
             ` : `
-              <div style="background: #eef2ff; border-radius: 14px; padding: 22px; margin-bottom: 25px; border: 1px solid #c7d2fe;">
-                <h3 style="color: #4f46e5; margin: 0 0 12px 0; font-size: 17px; text-align: right;">כלקוח, אתה יכול עכשיו:</h3>
-                <ul style="text-align: right; color: #334155; line-height: 2; padding-right: 20px; margin: 0;">
+              <div style="background: #E8EEF5; border-radius: 14px; padding: 22px; margin-bottom: 25px; border: 1px solid #C5D4E8;">
+                <h3 style="color: #0F2A44; margin: 0 0 12px 0; font-size: 17px; text-align: right;">כלקוח, אתה יכול עכשיו:</h3>
+                <ul style="text-align: right; color: #2D3748; line-height: 2; padding-right: 20px; margin: 0;">
                   <li>לחפש ספקי שירות מקצועיים באזור שלך</li>
                   <li>לקרוא ביקורות והמלצות</li>
                   <li>ליצור קשר ישיר עם ספקים</li>
@@ -282,9 +284,9 @@ getEmailHeader(subtitle = '') {
                 </ul>
               </div>
             `}
-            
+
             <div style="text-align: center;">
-              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%); color: white; padding: 14px 36px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(99,102,241,0.3);">
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}" style="display: inline-block; background: linear-gradient(135deg, #0F2A44 0%, #2F80ED 100%); color: white; padding: 14px 36px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(47,128,237,0.3);">
                 התחל עכשיו
               </a>
             </div>
@@ -308,15 +310,15 @@ getEmailHeader(subtitle = '') {
             <div style="background: #fffbeb; border-right: 3px solid #f59e0b; color: #92400e; padding: 12px 18px; border-radius: 10px; margin-bottom: 25px; font-size: 14px; font-weight: 600;">
               📅 התקבל ב: ${timestamp}
             </div>
-            
+
             ${this._contactField('שם השולח', name)}
-            ${this._contactField('כתובת אימייל', `<a href="mailto:${email}" style="color: #6366f1; text-decoration: none;">${email}</a>`)}
-            ${phone ? this._contactField('מספר טלפון', `<a href="tel:${phone}" style="color: #14b8a6; text-decoration: none;">${phone}</a>`) : ''}
+            ${this._contactField('כתובת אימייל', `<a href="mailto:${email}" style="color: #1A5490; text-decoration: none;">${email}</a>`)}
+            ${phone ? this._contactField('מספר טלפון', `<a href="tel:${phone}" style="color: #2F80ED; text-decoration: none;">${phone}</a>`) : ''}
             ${this._contactField('נושא הפניה', subject)}
-            
-            <div style="margin-bottom: 20px; padding: 18px; background: #eef2ff; border-radius: 12px; border-right: 3px solid #6366f1;">
-              <div style="font-weight: 700; color: #1e293b; font-size: 13px; margin-bottom: 8px; text-align: right;">תוכן ההודעה</div>
-              <div style="font-size: 15px; color: #334155; white-space: pre-wrap; line-height: 1.7; text-align: right;">${message}</div>
+
+            <div style="margin-bottom: 20px; padding: 18px; background: #E8EEF5; border-radius: 12px; border-right: 3px solid #1A5490;">
+              <div style="font-weight: 700; color: #0F2A44; font-size: 13px; margin-bottom: 8px; text-align: right;">תוכן ההודעה</div>
+              <div style="font-size: 15px; color: #2D3748; white-space: pre-wrap; line-height: 1.7; text-align: right;">${message}</div>
             </div>
           </div>
       ${this.getEmailFooter()}
@@ -325,9 +327,9 @@ getEmailHeader(subtitle = '') {
 
   _contactField(label, value) {
     return `
-      <div style="margin-bottom: 16px; padding: 16px; background: #f8fafc; border-radius: 12px; border-right: 3px solid #6366f1;">
-        <div style="font-weight: 700; color: #1e293b; font-size: 13px; margin-bottom: 6px; text-align: right;">${label}</div>
-        <div style="font-size: 15px; color: #334155; text-align: right;">${value}</div>
+      <div style="margin-bottom: 16px; padding: 16px; background: #F5F7FA; border-radius: 12px; border-right: 3px solid #1A5490;">
+        <div style="font-weight: 700; color: #0F2A44; font-size: 13px; margin-bottom: 6px; text-align: right;">${label}</div>
+        <div style="font-size: 15px; color: #2D3748; text-align: right;">${value}</div>
       </div>
     `;
   }
@@ -339,15 +341,15 @@ getEmailHeader(subtitle = '') {
     return `
       ${this.getEmailHeader('🎉 תודה על פנייתך!')}
           <div style="padding: 40px; direction: rtl;">
-            <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 22px; text-align: right;">שלום ${name},</h2>
-            
-            <p style="font-size: 16px; line-height: 1.7; color: #334155; margin-bottom: 25px; text-align: right;">
+            <h2 style="color: #0F2A44; margin: 0 0 20px 0; font-size: 22px; text-align: right;">שלום ${name},</h2>
+
+            <p style="font-size: 16px; line-height: 1.7; color: #2D3748; margin-bottom: 25px; text-align: right;">
               תודה שפנית אלינו בנושא "<strong>${subject}</strong>".
               <br>קיבלנו את הודעתך ונחזור אליך בהקדם האפשרי.
             </p>
-            
-            <div style="background: #eef2ff; border: 2px solid #6366f1; border-radius: 14px; padding: 20px; text-align: center;">
-              <strong style="color: #4f46e5; font-size: 16px;">⚡ זמן מענה צפוי: 2-4 שעות</strong>
+
+            <div style="background: #E8EEF5; border: 2px solid #1A5490; border-radius: 14px; padding: 20px; text-align: center;">
+              <strong style="color: #0F2A44; font-size: 16px;">⚡ זמן מענה צפוי: 2-4 שעות</strong>
             </div>
           </div>
       ${this.getEmailFooter()}
@@ -362,13 +364,13 @@ getEmailHeader(subtitle = '') {
     const html = `
       ${this.getEmailHeader('⏱️ תקופת הניסיון מסתיימת בקרוב')}
           <div style="padding: 40px; direction: rtl;">
-            <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 22px; text-align: right;">שלום ${user.first_name},</h2>
-            <p style="font-size: 16px; line-height: 1.7; color: #334155; margin-bottom: 20px; text-align: right;">
+            <h2 style="color: #0F2A44; margin: 0 0 20px 0; font-size: 22px; text-align: right;">שלום ${user.first_name},</h2>
+            <p style="font-size: 16px; line-height: 1.7; color: #2D3748; margin-bottom: 20px; text-align: right;">
               תקופת הניסיון החינמית שלך מסתיימת בעוד <strong>7 ימים</strong>.
             </p>
-            <p style="text-align: right; color: #334155;"><strong>תאריך סיום:</strong> ${new Date(user.premium_until).toLocaleDateString('he-IL')}</p>
+            <p style="text-align: right; color: #2D3748;"><strong>תאריך סיום:</strong> ${new Date(user.premium_until).toLocaleDateString('he-IL')}</p>
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.FRONTEND_URL}/billing" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%); color: white; padding: 14px 36px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(99,102,241,0.3);">שדרג למנוי בתשלום</a>
+              <a href="${process.env.FRONTEND_URL}/billing" style="display: inline-block; background: linear-gradient(135deg, #0F2A44 0%, #2F80ED 100%); color: white; padding: 14px 36px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(47,128,237,0.3);">שדרג למנוי בתשלום</a>
             </div>
           </div>
       ${this.getEmailFooter()}
@@ -381,7 +383,7 @@ getEmailHeader(subtitle = '') {
     const html = `
       ${this.getEmailHeader('⚠️ דחוף: 3 ימים נותרו!')}
           <div style="padding: 40px; direction: rtl;">
-            <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 22px; text-align: right;">שלום ${user.first_name},</h2>
+            <h2 style="color: #0F2A44; margin: 0 0 20px 0; font-size: 22px; text-align: right;">שלום ${user.first_name},</h2>
             <div style="background: #fef3c7; border-right: 3px solid #f59e0b; padding: 16px 18px; border-radius: 10px; margin-bottom: 20px;">
               <strong style="color: #92400e;">תקופת הניסיון שלך מסתיימת בעוד 3 ימים בלבד!</strong>
             </div>
@@ -399,8 +401,8 @@ getEmailHeader(subtitle = '') {
     const html = `
       ${this.getEmailHeader('📢 תקופת הניסיון הסתיימה')}
           <div style="padding: 40px; direction: rtl;">
-            <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 22px; text-align: right;">שלום ${user.first_name},</h2>
-            <p style="font-size: 16px; line-height: 1.7; color: #334155; margin-bottom: 25px; text-align: right;">
+            <h2 style="color: #0F2A44; margin: 0 0 20px 0; font-size: 22px; text-align: right;">שלום ${user.first_name},</h2>
+            <p style="font-size: 16px; line-height: 1.7; color: #2D3748; margin-bottom: 25px; text-align: right;">
               תקופת הניסיון החינמית שלך הסתיימה.
               <br>כדי להמשיך ליהנות מכל היתרונות - חדש את המנוי שלך עכשיו.
             </p>
@@ -408,7 +410,7 @@ getEmailHeader(subtitle = '') {
               <strong>⚠️ חשוב:</strong> הפרופיל שלך כבר לא מופיע בתוצאות החיפוש. חידוש המנוי יחזיר אותך לפעילות מלאה תוך דקות.
             </div>
             <div style="text-align: center;">
-              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/billing" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%); color: white; padding: 14px 36px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(99,102,241,0.3);">חדש מנוי</a>
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/billing" style="display: inline-block; background: linear-gradient(135deg, #0F2A44 0%, #2F80ED 100%); color: white; padding: 14px 36px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(47,128,237,0.3);">חדש מנוי</a>
             </div>
           </div>
       ${this.getEmailFooter()}
@@ -425,27 +427,27 @@ getEmailHeader(subtitle = '') {
     return `
       ${this.getEmailHeader('⏱️ בקשת ביטול מנוי התקבלה')}
           <div style="padding: 40px; text-align: right; direction: rtl;">
-            <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 22px;">שלום ${firstName},</h2>
-            
-            <p style="font-size: 16px; line-height: 1.7; color: #334155; margin-bottom: 25px;">
+            <h2 style="color: #0F2A44; margin: 0 0 20px 0; font-size: 22px;">שלום ${firstName},</h2>
+
+            <p style="font-size: 16px; line-height: 1.7; color: #2D3748; margin-bottom: 25px;">
               קיבלנו את בקשתך לביטול המנוי. אנחנו מצטערים לראות אותך עוזב! 😢
             </p>
 
             <div style="background: #fffbeb; border-right: 3px solid #f59e0b; padding: 20px 18px; border-radius: 10px; margin-bottom: 25px;">
               <h3 style="color: #f59e0b; margin: 0 0 12px 0; font-size: 18px;">מה קורה עכשיו?</h3>
-              <ul style="color: #334155; line-height: 1.9; padding-right: 20px; margin: 0;">
+              <ul style="color: #2D3748; line-height: 1.9; padding-right: 20px; margin: 0;">
                 <li>החשבון שלך ימשיך לפעול עד <strong>${formattedDate}</strong></li>
                 <li>הפרופיל שלך יישאר גלוי ופעיל עד סוף התקופה</li>
                 <li>ב-<strong>${formattedDate}</strong> החשבון יימחק אוטומטית ולצמיתות</li>
               </ul>
             </div>
 
-            <div style="background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%); padding: 28px; border-radius: 14px; text-align: center; margin-bottom: 25px;">
+            <div style="background: linear-gradient(135deg, #0F2A44 0%, #1A5490 100%); padding: 28px; border-radius: 14px; text-align: center; margin-bottom: 25px;">
               <div style="color: white; font-size: 20px; font-weight: 700; margin-bottom: 12px;">💡 שינית את דעתך?</div>
               <div style="color: rgba(255,255,255,0.9); font-size: 14px; margin-bottom: 20px;">
                 תוכל לבטל את בקשת המחיקה בכל עת לפני ${formattedDate}
               </div>
-              <a href="${process.env.FRONTEND_URL}/dashboard" style="display: inline-block; background: white; color: #14b8a6; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px;">
+              <a href="${process.env.FRONTEND_URL}/dashboard" style="display: inline-block; background: white; color: #2F80ED; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px;">
                 ביטול בקשת המחיקה
               </a>
             </div>
@@ -458,17 +460,17 @@ getEmailHeader(subtitle = '') {
     return `
       ${this.getEmailHeader('✅ המנוי שלך ממשיך!')}
           <div style="padding: 40px; text-align: right; direction: rtl;">
-            <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 22px;">שלום ${firstName},</h2>
-            
-            <div style="background: #f0fdfa; border-right: 3px solid #14b8a6; padding: 20px 18px; border-radius: 10px; margin-bottom: 25px;">
-              <h3 style="color: #0d9488; margin: 0 0 10px 0; font-size: 20px;">🎉 שמחים שנשארת איתנו!</h3>
-              <p style="color: #334155; line-height: 1.7; margin: 0; font-size: 15px;">
+            <h2 style="color: #0F2A44; margin: 0 0 20px 0; font-size: 22px;">שלום ${firstName},</h2>
+
+            <div style="background: #EBF3FE; border-right: 3px solid #2F80ED; padding: 20px 18px; border-radius: 10px; margin-bottom: 25px;">
+              <h3 style="color: #0F2A44; margin: 0 0 10px 0; font-size: 20px;">🎉 שמחים שנשארת איתנו!</h3>
+              <p style="color: #2D3748; line-height: 1.7; margin: 0; font-size: 15px;">
                 בקשת המחיקה שלך בוטלה בהצלחה. החשבון שלך ממשיך לפעול באופן רגיל.
               </p>
             </div>
 
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.FRONTEND_URL}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%); color: white; padding: 14px 36px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(99,102,241,0.3);">
+              <a href="${process.env.FRONTEND_URL}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #0F2A44 0%, #2F80ED 100%); color: white; padding: 14px 36px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(47,128,237,0.3);">
                 מעבר לדאשבורד
               </a>
             </div>
@@ -480,7 +482,7 @@ getEmailHeader(subtitle = '') {
   // ============================================
   // MÉTHODES D'ENVOI
   // ============================================
-  
+
   async _sendMail(to, subject, html) {
     try {
       const mailOptions = {
