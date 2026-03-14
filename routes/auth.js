@@ -663,8 +663,10 @@ router.post('/forgot-password', forgotPasswordLimiter, [
     // Générer le token de reset et envoyer l'email
     const result = await User.generateResetToken(email);
 
-    // Pour la sécurité, on retourne toujours un succès, même si l'email n'existe pas
-    // Cela empêche l'énumération d'emails
+    if (!result.success) {
+      return res.status(404).json({ success: false, message: result.message });
+    }
+
     return res.success(MESSAGES.SUCCESS.AUTH.EMAIL_SENT);
 
   } catch (error) {
