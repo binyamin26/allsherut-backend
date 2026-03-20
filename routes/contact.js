@@ -18,8 +18,8 @@ const validateContactForm = (data) => {
     errors.push({ field: 'email', message: MESSAGES.ERROR.VALIDATION.INVALID_EMAIL });
   }
   
-  if (!data.subject || data.subject.trim().length < 5) {
-    errors.push({ field: 'subject', message: 'נושא חייב להכיל לפחות 5 תווים' });
+  if (!data.subject || data.subject.trim().length < 2) {
+    errors.push({ field: 'subject', message: 'נושא חייב להכיל לפחות 2 תווים' });
   }
   
   if (!data.message || data.message.trim().length < 10) {
