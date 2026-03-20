@@ -260,7 +260,7 @@ body('phone').custom((value, { req }) => {
       // Données de base pour la création utilisateur
       const userData = {
         firstName: name.split(' ')[0],
-        lastName: name.split(' ').slice(1).join(' ') || name.split(' ')[0],
+        lastName: name.split(' ').slice(1).join(' ') || '',
         email: email?.trim() || '',
         phone: phone?.replace(/[\s-]/g, '') || '',
         password,
