@@ -78,9 +78,9 @@ static async getByServiceId(serviceId) {
           title: 'פיתוח אישי ומיומנויות', 
           items: subcategories.filter(s => s.display_order >= 80 && s.display_order <= 84) 
         },
-        sports: { 
-          title: 'ספורט', 
-          items: subcategories.filter(s => s.display_order >= 90 && s.display_order <= 109) 
+        sports: {
+          title: 'ספורט',
+          items: subcategories.filter(s => s.display_order >= 90 && s.display_order <= 119)
         }
       };
       
