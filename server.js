@@ -166,6 +166,9 @@ app.use('/api/reviews',
 // Gestion utilisateurs
 app.use('/api/users', require('./routes/users'));
 
+// Recrutement (offres d'emploi)
+app.use('/api/recruitment', require('./routes/recruitment'));
+
 // Upload avec rate limiting spécifique
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 heure
@@ -293,15 +296,72 @@ const cronService = require('./services/cronService');
 // =============================================
 // DÉMARRAGE DU SERVEUR
 // =============================================
+const runMigrations = async () => {
+  const mysql = require('mysql2/promise');
+  const conn = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT) || 3306,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    ssl: { rejectUnauthorized: false },
+  });
+
+  const steps = [
+    ['seeking_type column', `ALTER TABLE service_providers ADD COLUMN seeking_type ENUM('clients','recruitment','both') DEFAULT 'clients'`],
+    ['job_listings table', `CREATE TABLE IF NOT EXISTS job_listings (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      provider_id INT NOT NULL,
+      service_type VARCHAR(50) NOT NULL,
+      contract_type ENUM('full_time','part_time','one_time') NOT NULL,
+      salary VARCHAR(100) NOT NULL,
+      payment_type ENUM('hourly','daily','monthly') NOT NULL,
+      availability_days JSON,
+      availability_hours JSON,
+      experience_required VARCHAR(20) NOT NULL DEFAULT 'beginner',
+      languages_required JSON,
+      driving_license BOOLEAN DEFAULT FALSE,
+      description TEXT NOT NULL,
+      is_active BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (provider_id) REFERENCES service_providers(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`],
+    ['location_city column', `ALTER TABLE job_listings ADD COLUMN location_city VARCHAR(100) NULL`],
+    ['location_area column', `ALTER TABLE job_listings ADD COLUMN location_area VARCHAR(100) NULL`],
+    ['fix experience_required', `ALTER TABLE job_listings MODIFY COLUMN experience_required VARCHAR(20) NOT NULL DEFAULT 'beginner'`],
+    ['fix service_type', `ALTER TABLE service_providers MODIFY COLUMN service_type VARCHAR(50) NOT NULL`],
+    ['service_details column', `ALTER TABLE service_providers ADD COLUMN service_details JSON NULL`],
+    ['profile_image sp column', `ALTER TABLE service_providers ADD COLUMN profile_image VARCHAR(255) NULL`],
+    ['availability_days sp column', `ALTER TABLE service_providers ADD COLUMN availability_days JSON NULL`],
+    ['availability_hours sp column', `ALTER TABLE service_providers ADD COLUMN availability_hours JSON NULL`],
+    ['babysitting_types sp column', `ALTER TABLE service_providers ADD COLUMN babysitting_types JSON NULL`],
+    ['can_travel_alone sp column', `ALTER TABLE service_providers ADD COLUMN can_travel_alone TINYINT(1) DEFAULT 0`],
+    ['profile_completed sp column', `ALTER TABLE service_providers ADD COLUMN profile_completed BOOLEAN DEFAULT FALSE`],
+  ];
+
+  for (const [label, sql] of steps) {
+    try {
+      await conn.query(sql);
+      console.log(`✅ Migration OK: ${label}`);
+    } catch (err) {
+      console.log(`⚠️  Migration skip (${label}): ${err.message.split('\n')[0]}`);
+    }
+  }
+  await conn.end();
+};
+
 const startServer = async () => {
   try {
     console.log('🔄 בדיקת חיבור למסד נתונים...');
     const dbConnected = await testConnection();
-    
+
     if (!dbConnected) {
       console.error('❌ שגיאה: לא ניתן להתחבר למסד הנתונים');
       process.exit(1);
     }
+
+    await runMigrations();
 
     const PORT = process.env.PORT || 10000;
 

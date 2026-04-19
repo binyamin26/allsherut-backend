@@ -527,7 +527,7 @@ getEmailHeader(subtitle = '') {
       const mailOptions = {
         from: { name: 'AllSherut Contact', address: adminEmail },
         to: adminEmail,
-        subject: `🏠 AllSherut - פניה חדשה: ${formData.subject}`,
+        subject: `AllSherut - פניה חדשה: ${formData.subject}`,
         html: this.getContactEmailTemplate(formData),
         replyTo: formData.email
       };
@@ -541,7 +541,7 @@ getEmailHeader(subtitle = '') {
   }
 
   async sendThankYouEmail(formData) {
-    return this._sendMail(formData.email, 'תודה על פנייתך - AllSherut 🏠', this.getThankYouTemplate(formData.name, formData.subject));
+    return this._sendMail(formData.email, 'תודה על פנייתך - AllSherut', this.getThankYouTemplate(formData.name, formData.subject));
   }
 
   async sendSubscriptionCancellationEmail(email, firstName, deletionDate) {

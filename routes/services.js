@@ -6,7 +6,8 @@ const { MESSAGES, DEV_LOGS, getServiceLabel } = require('../constants/messages')
 const ResponseHelper = require('../utils/responseHelper');
 const ServiceSubcategory = require('../models/ServiceSubcategory');
 const { authenticateToken } = require('../middleware/authMiddleware');
-const User = require('../models/User')
+const User = require('../models/User');
+const { query, transaction } = require('../config/database');
 
 // =============================================
 // CONFIGURATION DES SERVICES HOMESHERUT
@@ -822,6 +823,96 @@ router.get('/:serviceId/subcategories', async (req, res) => {
     
     const { errorResponse, statusCode } = ErrorHandler.serverError(error);
     res.status(statusCode).json(errorResponse);
+  }
+});
+
+// ============================================
+// AJOUT D'UN NOUVEAU SERVICE À UN COMPTE EXISTANT
+// ============================================
+
+/**
+ * POST /api/services/add
+ * Ajouter un nouveau domaine de service à un prestataire existant
+ */
+router.post('/add', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { serviceType, seekingType, serviceDetails } = req.body;
+
+    if (!serviceType) {
+      return res.status(400).json({ success: false, message: 'סוג שירות נדרש' });
+    }
+
+    if (req.user.role !== 'provider') {
+      return res.status(403).json({ success: false, message: 'רק ספקי שירות יכולים להוסיף שירותים' });
+    }
+
+    // Vérifier si ce service existe déjà pour cet utilisateur
+    const existing = await query(
+      'SELECT id FROM service_providers WHERE user_id = ? AND service_type = ? LIMIT 1',
+      [userId, serviceType]
+    );
+
+    if (existing && existing.length > 0) {
+      return res.status(409).json({ success: false, message: 'שירות זה כבר קיים בחשבונך' });
+    }
+
+    const validSeekingType = ['clients', 'recruitment'].includes(seekingType) ? seekingType : 'clients';
+
+    await transaction(async (connection) => {
+      // Insérer le nouveau service
+      const [insertResult] = await connection.execute(
+        `INSERT INTO service_providers (user_id, service_type, seeking_type, is_active, created_at)
+         VALUES (?, ?, ?, TRUE, NOW())`,
+        [userId, serviceType, validSeekingType]
+      );
+
+      const newProviderId = insertResult.insertId;
+
+      // Si des détails de service sont fournis, les sauvegarder immédiatement
+      if (serviceDetails && typeof serviceDetails === 'object' && Object.keys(serviceDetails).length > 0) {
+        await User.updateServiceProviderWithDetails(connection, newProviderId, serviceType, serviceDetails);
+        // Marquer le profil comme complété
+        await connection.execute(
+          'UPDATE service_providers SET profile_completed = 1 WHERE id = ?',
+          [newProviderId]
+        );
+      }
+
+      // Copier les zones de travail du service existant pour que le prestataire apparaisse dans les recherches
+      const [existingAreas] = await connection.execute(
+        `SELECT pwa.city, pwa.neighborhood
+         FROM provider_working_areas pwa
+         JOIN service_providers sp ON pwa.provider_id = sp.id
+         WHERE sp.user_id = ? AND sp.id != ?
+         LIMIT 20`,
+        [userId, newProviderId]
+      );
+
+      if (existingAreas && existingAreas.length > 0) {
+        for (const area of existingAreas) {
+          await connection.execute(
+            `INSERT IGNORE INTO provider_working_areas (provider_id, city, neighborhood, created_at)
+             VALUES (?, ?, ?, NOW())`,
+            [newProviderId, area.city, area.neighborhood]
+          );
+        }
+        console.log(`✅ ${existingAreas.length} zones de travail copiées vers le nouveau service`);
+      }
+    });
+
+    // Retourner l'utilisateur mis à jour
+    const updatedUser = await User.findById(userId);
+
+    return res.status(201).json({
+      success: true,
+      message: 'השירות נוסף בהצלחה',
+      data: { user: updatedUser, newService: serviceType }
+    });
+
+  } catch (error) {
+    console.error('[POST /services/add] Erreur:', error);
+    return res.status(500).json({ success: false, message: 'שגיאה בהוספת השירות' });
   }
 });
 

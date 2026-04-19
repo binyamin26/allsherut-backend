@@ -37,65 +37,77 @@ class User {
         const emailExists = await User.emailExists(userData.email);
      // Vérifier si l'email existe
 if (userData.role === 'provider') {
-  // Pour providers : vérifier si email + service existe déjà
+  const existingUser = await User.findByEmail(userData.email);
+
+  // Vérifier le mot de passe si le compte existe déjà
+  if (existingUser) {
+    const [userWithPassword] = await connection.execute(
+      'SELECT password FROM users WHERE id = ?',
+      [existingUser.id]
+    );
+    const isValidPassword = await bcrypt.compare(userData.password, userWithPassword[0].password);
+    if (!isValidPassword) {
+      throw new Error('INVALID_PASSWORD_FOR_EXISTING_ACCOUNT');
+    }
+
+    const newFirstName = (userData.firstName || userData.first_name || '').trim().toLowerCase();
+    const newLastName = (userData.lastName || userData.last_name || '').trim().toLowerCase();
+    const existingFirstName = (existingUser.first_name || '').trim().toLowerCase();
+    const existingLastName = (existingUser.last_name || '').trim().toLowerCase();
+    if (newFirstName !== existingFirstName || newLastName !== existingLastName) {
+      throw new Error('NAME_MISMATCH_FOR_EXISTING_ACCOUNT');
+    }
+  }
+
+  // Vérifier si email + service existe déjà
   const hasService = await User.hasService(userData.email, userData.serviceType);
   if (hasService) {
-    throw new Error('אתה כבר רשום לשירות זה');
+    // Le service existe déjà — mettre à jour le seeking_type si nécessaire
+    const newSeeking = userData.seekingType || 'clients';
+    if (newSeeking !== 'clients') {
+      await connection.execute(`
+        UPDATE service_providers
+        SET seeking_type = ?,
+        updated_at = NOW()
+        WHERE user_id = ? AND service_type = ?
+      `, [newSeeking, existingUser.id, userData.serviceType]);
+    }
+    // Retourner l'utilisateur tel quel
+    const [users] = await connection.execute(
+      'SELECT * FROM users WHERE id = ? AND is_active = TRUE',
+      [existingUser.id]
+    );
+    return new User(users[0]);
   }
-  
 
-    
-// Si email existe mais pas ce service : vérifier le mot de passe d'abord
-const existingUser = await User.findByEmail(userData.email);
-if (existingUser) {
-  // ✅ VÉRIFIER LE MOT DE PASSE AVANT D'AJOUTER UN SERVICE
-  const [userWithPassword] = await connection.execute(
-    'SELECT password FROM users WHERE id = ?',
-    [existingUser.id]
-  );
-  
-const isValidPassword = await bcrypt.compare(userData.password, userWithPassword[0].password);
-  if (!isValidPassword) {
-    throw new Error('INVALID_PASSWORD_FOR_EXISTING_ACCOUNT');
+  // Si email existe mais pas ce service : ajouter le service
+  if (existingUser) {
+    await connection.execute(
+      'UPDATE users SET service_type = ?, phone = COALESCE(?, phone), updated_at = NOW() WHERE id = ?',
+      [userData.serviceType, userData.phone, existingUser.id]
+    );
+
+    await connection.execute(`
+      INSERT INTO service_providers (
+        user_id, service_type, title, experience_years,
+        location_city, is_active, seeking_type, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+    `, [
+      existingUser.id,
+      userData.serviceType,
+      `ספק ${userData.serviceType} מקצועי`,
+      0,
+      null,
+      true,
+      userData.seekingType || 'clients',
+    ]);
+
+    const [users] = await connection.execute(
+      'SELECT * FROM users WHERE id = ? AND is_active = TRUE',
+      [existingUser.id]
+    );
+    return new User(users[0]);
   }
-
-  // Vérifier que le nom correspond aussi
-  const newFirstName = (userData.firstName || userData.first_name || '').trim().toLowerCase();
-  const newLastName = (userData.lastName || userData.last_name || '').trim().toLowerCase();
-  const existingFirstName = (existingUser.first_name || '').trim().toLowerCase();
-  const existingLastName = (existingUser.last_name || '').trim().toLowerCase();
-
-  if (newFirstName !== existingFirstName || newLastName !== existingLastName) {
-    throw new Error('NAME_MISMATCH_FOR_EXISTING_ACCOUNT');
-  }
-// Mettre à jour le service_type ET le téléphone dans users
-  await connection.execute(
-    'UPDATE users SET service_type = ?, phone = COALESCE(?, phone), updated_at = NOW() WHERE id = ?',
-    [userData.serviceType, userData.phone, existingUser.id]
-  );
-
-  // Ajouter juste le nouveau service
-  await connection.execute(`
-    INSERT INTO service_providers (
-      user_id, service_type, title, experience_years, 
-      location_city, is_active, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, NOW())
-  `, [
-    existingUser.id,
-    userData.serviceType,
-    `ספק ${userData.serviceType} מקצועי`,
-    0,
-    null,
-    true
-  ]);
-  
-  // Retourner l'utilisateur existant
-  const [users] = await connection.execute(
-    'SELECT * FROM users WHERE id = ? AND is_active = TRUE',
-    [existingUser.id]
-  );
-  return new User(users[0]);
-}
 } else {
   // Pour clients : vérification normale
   const emailExists = await User.emailExists(userData.email);
@@ -148,8 +160,8 @@ if (userData.role === 'provider') {
         `, [
           userData.email.toLowerCase().trim(),
           hashedPassword,
-          userData.firstName || userData.first_name,
-          userData.lastName || userData.last_name,
+          userData.firstName || userData.first_name || null,
+          (userData.lastName ?? userData.last_name) ?? null,
           userData.phone || null,
           userData.role,
           userData.serviceType || userData.service_type || null,
@@ -162,16 +174,17 @@ if (userData.role === 'provider') {
         if (userData.role === 'provider') {
           await connection.execute(`
             INSERT INTO service_providers (
-              user_id, service_type, title, experience_years, 
-              location_city, is_active, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, NOW())
+              user_id, service_type, title, experience_years,
+              location_city, is_active, seeking_type, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
           `, [
             userId,
             userData.serviceType || userData.service_type,
             `ספק ${userData.serviceType || userData.service_type} מקצועי`,
             0,
             null,
-            true
+            true,
+            userData.seekingType || 'clients',
           ]);
         }
 
@@ -601,9 +614,7 @@ try {
       errors.push({ field: 'firstName', message: 'שם פרטי נדרש' });
     }
 
-    if (!lastName || !lastName.trim()) {
-      errors.push({ field: 'lastName', message: 'שם משפחה נדרש' });
-    }
+    // last name is optional (single-name users allowed)
 
     // Téléphone (optionnel mais si fourni, doit être valide)
     if (userData.phone && !/^05\d{8}$/.test(userData.phone)) {
@@ -841,14 +852,20 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       'certifications'
     ];
     
-    // Champs de base communs
+    // Champs de base communs (uniquement les colonnes garanties dans le schéma)
     const baseFields = {
       description: details.description || `ספק ${serviceType} מקצועי`,
       experience_years: details.experience || details.experienceYears || 0,
       hourly_rate: details.hourlyRate || details.rate || 0,
-      service_details: JSON.stringify(details),
-      profile_image: profileImagePath ? profileImagePath.replace(/\\/g, '/') : null
     };
+
+    // profile_image : seulement si une image est fournie (colonne optionnelle en prod)
+    if (profileImagePath) {
+      baseFields.profile_image = profileImagePath.replace(/\\/g, '/');
+    }
+
+    // service_details : colonne JSON ajoutée via migration — incluse conditionnellement
+    baseFields.service_details = JSON.stringify(details);
 
     // ✅ AUTOMATIQUE : Pour chaque colonne JSON, convertir en JSON
     jsonColumns.forEach(col => {
@@ -1028,7 +1045,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       if (!serviceDetails.languages || serviceDetails.languages.length === 0) {
         errors.push({ field: 'languages', message: 'יש לבחור לפחות שפה אחת' });
       }
-      if (!serviceDetails.hourlyRate) errors.push({ field: 'hourlyRate', message: 'תעריף שעתי נדרש' });
       break;
 
     case 'cleaning':
@@ -1039,7 +1055,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       if (!serviceDetails.frequency || serviceDetails.frequency.length === 0) {
         errors.push({ field: 'frequency', message: 'יש לבחור תדירות' });
       }
- if (!serviceDetails.hourlyRate) errors.push({ field: 'hourlyRate', message: 'תעריף נדרש' });;
       break;
 
     case 'gardening':
@@ -1052,7 +1067,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       if (!serviceDetails.equipment || serviceDetails.equipment.length === 0) {
         errors.push({ field: 'equipment', message: 'יש לציין ציוד' });
       }
-      if (!serviceDetails.rate) errors.push({ field: 'rate', message: 'תעריף נדרש' });
       break;
 
     case 'petcare':
@@ -1073,9 +1087,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       if (!serviceDetails.levels || serviceDetails.levels.length === 0) {
         errors.push({ field: 'levels', message: 'יש לבחור רמות לימוד' });
       }
-      if (!serviceDetails.qualifications) {
-        errors.push({ field: 'qualifications', message: 'השכלה/הסמכות נדרשות' });
-      }
       if (!serviceDetails.teachingMode) {
         errors.push({ field: 'teachingMode', message: 'אופן הוראה נדרש' });
       }
@@ -1085,14 +1096,20 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       if (!serviceDetails.careTypes || serviceDetails.careTypes.length === 0) {
         errors.push({ field: 'careTypes', message: 'יש לבחור סוגי טיפול' });
       }
-      if (!serviceDetails.certification) {
-        errors.push({ field: 'certification', message: 'הכשרה/הסמכה נדרשת' });
+      if (!serviceDetails.availability_days || serviceDetails.availability_days.length === 0) {
+        errors.push({ field: 'availability_days', message: 'יש לבחור ימי זמינות' });
       }
       if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
         errors.push({ field: 'availability_hours', message: 'יש לבחור זמינות' });
       }
       if (!serviceDetails.experience) {
         errors.push({ field: 'experience', message: 'ניסיון עם קשישים נדרש' });
+      }
+      if (!serviceDetails.age) {
+        errors.push({ field: 'age', message: 'גיל נדרש' });
+      }
+      if (!serviceDetails.languages || serviceDetails.languages.length === 0) {
+        errors.push({ field: 'languages', message: 'יש לבחור לפחות שפה אחת' });
       }
       break;
 
@@ -1598,6 +1615,10 @@ async updateFullProfile(profileData) {
         userUpdateFields.push('last_name = ?');
         userUpdateValues.push(profileData.lastName);
       }
+      if (profileData.email) {
+        userUpdateFields.push('email = ?');
+        userUpdateValues.push(profileData.email.toLowerCase().trim());
+      }
       if (profileData.phone !== undefined) {
         userUpdateFields.push('phone = ?');
         userUpdateValues.push(profileData.phone || null);
@@ -1729,6 +1750,7 @@ providerUpdateValues.push(JSON.stringify(updatedDetails));
       // 4. Mettre à jour l'instance actuelle
       if (profileData.firstName) this.first_name = profileData.firstName;
       if (profileData.lastName) this.last_name = profileData.lastName;
+      if (profileData.email) this.email = profileData.email.toLowerCase().trim();
       if (profileData.phone !== undefined) this.phone = profileData.phone;
 
       console.log('🎉 Mise à jour profil complet réussie');
