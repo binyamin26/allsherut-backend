@@ -847,7 +847,7 @@ if (providerProfile && providerProfile.profileImage) {
 // =============================================
 router.put('/me', authenticateToken, [
   body('firstName').optional().trim().isLength({ min: 2 }).withMessage('שם פרטי נדרש'),
-  body('lastName').optional().trim().isLength({ min: 2 }).withMessage('שם משפחה נדרש'),
+  body('lastName').optional().trim(),
   body('phone').optional().customSanitizer(v => v?.replace(/[\s\-(). /]/g, '')).matches(/^05\d{8}$/).withMessage(MESSAGES.ERROR.VALIDATION.INVALID_PHONE)
 ], async (req, res) => {
   try {
@@ -864,7 +864,7 @@ router.put('/me', authenticateToken, [
     // Préparer les données à mettre à jour
     const updateData = {};
     if (req.body.firstName) updateData.first_name = req.body.firstName;
-    if (req.body.lastName) updateData.last_name = req.body.lastName;
+    if (req.body.lastName !== undefined) updateData.last_name = req.body.lastName || '';
     if (req.body.phone) updateData.phone = req.body.phone;
     if (req.body.profileImage !== undefined) updateData.profile_image = req.body.profileImage;
 
