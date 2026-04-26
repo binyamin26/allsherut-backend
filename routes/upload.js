@@ -263,10 +263,11 @@ router.post('/gallery-image', authenticateToken, upload.single('galleryImage'), 
     }
 
     let gallery = [];
-    try {
-      gallery = result[0].profile_images ? JSON.parse(result[0].profile_images) : [];
-    } catch (e) {
-      gallery = [];
+    const rawGallery = result[0].profile_images;
+    if (Array.isArray(rawGallery)) {
+      gallery = rawGallery;
+    } else if (typeof rawGallery === 'string' && rawGallery) {
+      try { gallery = JSON.parse(rawGallery); } catch (e) { gallery = []; }
     }
 
     if (gallery.length >= 6) {
@@ -333,9 +334,12 @@ router.delete('/gallery-image', authenticateToken, async (req, res) => {
     if (!result[0]) return res.notFound('provider');
 
     let gallery = [];
-    try {
-      gallery = result[0].profile_images ? JSON.parse(result[0].profile_images) : [];
-    } catch (e) { gallery = []; }
+    const rawDel = result[0].profile_images;
+    if (Array.isArray(rawDel)) {
+      gallery = rawDel;
+    } else if (typeof rawDel === 'string' && rawDel) {
+      try { gallery = JSON.parse(rawDel); } catch (e) { gallery = []; }
+    }
 
     // Supprimer de Cloudinary
     if (imageUrl.includes('cloudinary')) {
