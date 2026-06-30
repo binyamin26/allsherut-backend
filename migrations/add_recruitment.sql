@@ -3,7 +3,7 @@
 -- Fichier: backend/migrations/add_recruitment.sql
 -- =============================================
 
-USE homesherut_db;
+
 
 -- 1. Ajout seeking_type sur service_providers (safe : ignore si déjà existant)
 SET @col_exists = (

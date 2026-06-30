@@ -60,7 +60,7 @@ static async getByServiceId(serviceId) {
         },
         languages: { 
           title: 'שפות ותרבויות', 
-          items: subcategories.filter(s => s.display_order >= 40 && s.display_order <= 46) 
+          items: subcategories.filter(s => s.display_order >= 40 && s.display_order <= 47)
         },
         crafts: { 
           title: 'יצירה ועבודות יד', 
@@ -72,11 +72,11 @@ static async getByServiceId(serviceId) {
         },
         cooking: { 
           title: 'קולינריה', 
-          items: subcategories.filter(s => s.display_order >= 70 && s.display_order <= 73) 
+          items: subcategories.filter(s => s.display_order >= 70 && s.display_order <= 74)
         },
-        personal: { 
-          title: 'פיתוח אישי ומיומנויות', 
-          items: subcategories.filter(s => s.display_order >= 80 && s.display_order <= 84) 
+        personal: {
+          title: 'פיתוח אישי ומנטלי',
+          items: subcategories.filter(s => s.display_order >= 80 && s.display_order <= 89)
         },
         sports: {
           title: 'ספורט',

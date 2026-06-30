@@ -1,25 +1,13 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const crypto = require('crypto');
 
-class EmailService {
- constructor() {
-  this.transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    },
-    tls: {
-      rejectUnauthorized: false,
-      minVersion: 'TLSv1.2'
-    }
-  });
+const resend = new Resend(process.env.RESEND_API_KEY);
+const FROM = 'AllSherut <contact@allsherut.com>';
 
-  // Logo — nouveau logo AS (palette bleu marine)
-  this.logoUrl = 'https://allsherut.com/images/logo-homesherut26.png';
-}
+class EmailService {
+  constructor() {
+    this.logoUrl = 'https://allsherut.com/images/logo-homesherut26.png';
+  }
 
   generateResetToken() {
     return crypto.randomBytes(32).toString('hex');
@@ -203,7 +191,8 @@ getEmailHeader(subtitle = '') {
       'glass-works': 'זגגות', 'glassworks': 'זגגות', 'locksmith': 'מנעולן'
     };
     const serviceName = serviceNames[serviceType] || '';
-    const starsDisplay = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+    const starsOut5 = Math.round(rating / 2);
+    const starsDisplay = '★'.repeat(starsOut5) + '☆'.repeat(5 - starsOut5);
 
     return `
       ${this.getEmailHeader('💬 ביקורת חדשה!')}
@@ -485,18 +474,21 @@ getEmailHeader(subtitle = '') {
 
   async _sendMail(to, subject, html) {
     try {
-      const mailOptions = {
-        from: { name: 'AllSherut', address: process.env.SMTP_FROM || process.env.SMTP_USER },
-        to,
+      const { data, error } = await resend.emails.send({
+        from: FROM,
+        to: [to],
         subject,
         html
-      };
-      const result = await this.transporter.sendMail(mailOptions);
-      console.log(`✅ Email sent to ${to}: ${result.messageId}`);
-      return { success: true, messageId: result.messageId };
-    } catch (error) {
-      console.error(`❌ Failed to send email to ${to}:`, error);
-      return { success: false, error: error.message };
+      });
+      if (error) {
+        console.error(`❌ Failed to send email to ${to}:`, error);
+        return { success: false, error: error.message };
+      }
+      console.log(`✅ Email sent to ${to}: ${data.id}`);
+      return { success: true, messageId: data.id };
+    } catch (err) {
+      console.error(`❌ Failed to send email to ${to}:`, err);
+      return { success: false, error: err.message };
     }
   }
 
@@ -522,21 +514,24 @@ getEmailHeader(subtitle = '') {
   }
 
   async sendContactEmail(formData) {
-    const adminEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
+    const adminEmail = process.env.ADMIN_EMAIL || 'allsherutcontact@gmail.com';
     try {
-      const mailOptions = {
-        from: { name: 'AllSherut Contact', address: adminEmail },
-        to: adminEmail,
+      const { data, error } = await resend.emails.send({
+        from: FROM,
+        to: [adminEmail],
+        reply_to: formData.email,
         subject: `AllSherut - פניה חדשה: ${formData.subject}`,
-        html: this.getContactEmailTemplate(formData),
-        replyTo: formData.email
-      };
-      const result = await this.transporter.sendMail(mailOptions);
-      console.log('✅ Contact email sent:', result.messageId);
-      return { success: true, messageId: result.messageId };
-    } catch (error) {
-      console.error('❌ Failed to send contact email:', error);
-      return { success: false, error: error.message };
+        html: this.getContactEmailTemplate(formData)
+      });
+      if (error) {
+        console.error('❌ Failed to send contact email:', error);
+        return { success: false, error: error.message };
+      }
+      console.log('✅ Contact email sent:', data.id);
+      return { success: true, messageId: data.id };
+    } catch (err) {
+      console.error('❌ Failed to send contact email:', err);
+      return { success: false, error: err.message };
     }
   }
 
@@ -553,14 +548,8 @@ getEmailHeader(subtitle = '') {
   }
 
   async verifyConnection() {
-    try {
-      await this.transporter.verify();
-      console.log('✅ Email service ready');
-      return true;
-    } catch (error) {
-      console.error('❌ Email service not ready:', error.message);
-      return false;
-    }
+    console.log('✅ Email service ready (Resend)');
+    return true;
   }
 }
 

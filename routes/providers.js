@@ -439,7 +439,7 @@ router.get('/:id', async (req, res) => {
     u.premium_until,
     sp.profile_image as provider_profile_image,
     sp.profile_images as provider_gallery_images,
-u.profile_image as user_profile_image,
+    u.profile_image as user_profile_image,
     u.is_active as user_active,
     
     -- Statistiques reviews
@@ -451,13 +451,14 @@ u.profile_image as user_profile_image,
   LEFT JOIN reviews r ON sp.id = r.provider_id AND r.is_published = TRUE
   
   WHERE (sp.user_id = ? OR sp.id = ?)
-    AND sp.is_active = TRUE 
+    AND sp.is_active = TRUE
     AND u.is_active = TRUE
-  
+
   GROUP BY sp.id, u.id
+  ORDER BY (sp.id = ?) DESC
 `;
 
-    const provider = await query(providerQuery, [providerId, providerId]);
+    const provider = await query(providerQuery, [providerId, providerId, providerId]);
 
     // Gestion provider non trouvé
     if (provider.length === 0) {
@@ -470,7 +471,7 @@ u.profile_image as user_profile_image,
 
     // Récupération des zones de travail avec le BON provider_id
     const workingAreasQuery = `
-      SELECT 
+      SELECT DISTINCT
         pwa.city,
         pwa.neighborhood
       FROM provider_working_areas pwa
@@ -497,13 +498,16 @@ u.profile_image as user_profile_image,
       .catch(err => console.error(DEV_LOGS.DATABASE.QUERY_ERROR, 'View count update failed:', err.message));
 
     // Construction de la réponse complète
+    const serviceFirstName = serviceDetailsFromJson?.service_first_name || providerData.first_name;
+    const serviceLastName = serviceDetailsFromJson?.service_last_name ?? providerData.last_name;
+
     const formattedProvider = {
       // Informations de base
       id: providerData.id,
       userId: providerData.user_id,
-      name: `${providerData.first_name} ${providerData.last_name}`,
-      firstName: providerData.first_name,
-      lastName: providerData.last_name,
+      name: `${serviceFirstName} ${serviceLastName}`.trim(),
+      firstName: serviceFirstName,
+      lastName: serviceLastName,
       email: providerData.email,
       phone: providerData.phone,
       verified: providerData.verification_status === 'verified',
@@ -586,6 +590,7 @@ serviceDetails: {
       },
       
       // Médias
+      profile_image: providerData.provider_profile_image || providerData.user_profile_image,
      media: {
   profileImage: providerData.provider_profile_image || providerData.user_profile_image,
  gallery: (() => {

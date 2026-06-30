@@ -206,26 +206,30 @@ router.post('/create', async (req, res) => {
     console.log('📝 Création avis avec publication immédiate');
     console.log('📋 Données reçues:', JSON.stringify(req.body, null, 2));
     
-    const { email, verificationCode, providerId, serviceType, rating, title, comment, displayNameOption } = req.body;
-    
+    const { email, verificationCode, providerId, serviceType, qualityRating, priceRating, availabilityRating, professionalismRating, title, comment, displayNameOption } = req.body;
+
     // Validation des données obligatoires
-    if (!email || !verificationCode || !providerId || !serviceType || !rating || !comment) {
+    if (!email || !verificationCode || !providerId || !serviceType || !qualityRating || !priceRating || !availabilityRating || !professionalismRating || !comment) {
       console.log('❌ ÉCHEC: Données manquantes');
       return res.status(400).json({
         success: false,
-        message: 'נתונים חסרים - נדרש אימייל, קוד, ספק, שירות, דירוג והערה'
+        message: 'נתונים חסרים - נדרש אימייל, קוד, ספק, שירות, כל הדירוגים והערה'
       });
     }
-    
-    // Validation du rating
-    if (rating < 1 || rating > 5) {
-      console.log('❌ ÉCHEC: Rating invalide:', rating);
-      return res.status(400).json({
-        success: false,
-        message: 'דירוג חייב להיות בין 1 ל-5'
-      });
+
+    // Validation des 4 sous-notes (1-10)
+    const subRatings = { qualityRating, priceRating, availabilityRating, professionalismRating };
+    for (const [key, val] of Object.entries(subRatings)) {
+      const n = Number(val);
+      if (!Number.isInteger(n) || n < 1 || n > 10) {
+        console.log(`❌ ÉCHEC: ${key} invalide:`, val);
+        return res.status(400).json({ success: false, message: 'כל הדירוגים חייבים להיות בין 1 ל-10' });
+      }
     }
-    
+
+    // Note globale = moyenne des 4 catégories
+    const globalRating = parseFloat(((Number(qualityRating) + Number(priceRating) + Number(availabilityRating) + Number(professionalismRating)) / 4).toFixed(2));
+
     // Validation longueur commentaire
     if (comment.trim().length < 3) {
       console.log('❌ ÉCHEC: Commentaire trop court:', comment.length);
@@ -234,19 +238,23 @@ router.post('/create', async (req, res) => {
         message: 'ההערה חייבת להכיל לפחות 3 תווים'
       });
     }
-    
-    console.log(`⭐ Création avis ${rating}/5 pour provider ${providerId} par ${email}`);
-    
+
+    console.log(`⭐ Création avis ${globalRating}/10 pour provider ${providerId} par ${email}`);
+
     // NOUVEAU SYSTÈME : CRÉATION SIMPLIFIÉE avec publication immédiate
     const result = await Review.createReview({
       email,
       verificationCode,
       providerId,
       serviceType,
-      rating,
+      qualityRating: Number(qualityRating),
+      priceRating: Number(priceRating),
+      availabilityRating: Number(availabilityRating),
+      professionalismRating: Number(professionalismRating),
+      rating: globalRating,
       title,
       comment,
-       displayNameOption
+      displayNameOption
     });
     
     if (!result.success) {

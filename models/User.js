@@ -52,10 +52,12 @@ if (userData.role === 'provider') {
 
     const newFirstName = (userData.firstName || userData.first_name || '').trim().toLowerCase();
     const newLastName = (userData.lastName || userData.last_name || '').trim().toLowerCase();
-    const existingFirstName = (existingUser.first_name || '').trim().toLowerCase();
-    const existingLastName = (existingUser.last_name || '').trim().toLowerCase();
-    if (newFirstName !== existingFirstName || newLastName !== existingLastName) {
-      throw new Error('NAME_MISMATCH_FOR_EXISTING_ACCOUNT');
+    if (newFirstName || newLastName) {
+      const existingFirstName = (existingUser.first_name || '').trim().toLowerCase();
+      const existingLastName = (existingUser.last_name || '').trim().toLowerCase();
+      if (newFirstName !== existingFirstName || newLastName !== existingLastName) {
+        throw new Error('NAME_MISMATCH_FOR_EXISTING_ACCOUNT');
+      }
     }
   }
 
@@ -602,8 +604,8 @@ try {
     }
 
     // Mot de passe
-    if (!userData.password || userData.password.length < 8) {
-      errors.push({ field: 'password', message: 'הסיסמה חייבת להכיל לפחות 8 תווים' });
+    if (!userData.password || userData.password.length < 6) {
+      errors.push({ field: 'password', message: 'הסיסמה חייבת להכיל לפחות 6 תווים' });
     }
 
     // Noms
@@ -616,10 +618,7 @@ try {
 
     // last name is optional (single-name users allowed)
 
-    // Téléphone (optionnel mais si fourni, doit être valide)
-    if (userData.phone && !/^05\d{8}$/.test(userData.phone)) {
-      errors.push({ field: 'phone', message: 'מספר טלפון לא תקין (05xxxxxxxx)' });
-    }
+    // Téléphone accepté sans restriction de format
 
     // Rôle
     if (!userData.role || !['client', 'provider'].includes(userData.role)) {
@@ -630,11 +629,12 @@ try {
     if (userData.role === 'provider') {
       const serviceType = userData.serviceType || userData.service_type;
      const validServices = [
-  'babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'eldercare',
+  'babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'sports_activities', 'eldercare',
   'laundry', 'property_management', 'electrician', 'plumbing', 'air_conditioning',
   'gas_technician', 'drywall', 'carpentry', 'home_organization', 'event_entertainment',
-  'private_chef', 'painting', 'waterproofing', 'contractor', 'aluminum', 
-  'glass_works', 'locksmith'
+  'dj', 'private_chef', 'painting', 'waterproofing', 'contractor', 'aluminum',
+  'glass_works', 'locksmith', 'moving', 'photographer', 'event_decoration', 'pest_control',
+  'handyman', 'mechanic', 'metalwork', 'driver'
 ];
       
       if (!serviceType || !validServices.includes(serviceType)) {
@@ -788,7 +788,8 @@ static async hasService(email, serviceType) {
         console.log('✅ Utilisateur créé, ID:', user.id);
 
         // 2. Récupérer le service provider créé automatiquement
-        const [providers] = await connection.execute(
+        // pool.query (hors transaction) pour voir les données committées par User.create
+        const providers = await query(
           'SELECT id FROM service_providers WHERE user_id = ? AND service_type = ?',
           [user.id, userData.serviceType]
         );
@@ -810,8 +811,9 @@ static async hasService(email, serviceType) {
         );
         console.log('✅ Détails service enregistrés');
 
-        // 4. Insérer les zones de travail
+        // 4. Insérer les zones de travail (supprimer d'abord pour éviter les doublons)
         if (workingAreas && workingAreas.length > 0) {
+          await connection.execute('DELETE FROM provider_working_areas WHERE provider_id = ?', [providerId]);
           await User.insertWorkingAreas(connection, providerId, workingAreas);
           console.log('✅ Zones de travail enregistrées:', workingAreas.length);
         }
@@ -854,7 +856,7 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
     
     // Champs de base communs (uniquement les colonnes garanties dans le schéma)
     const baseFields = {
-      description: details.description || `ספק ${serviceType} מקצועי`,
+      description: details.description || null,
       experience_years: details.experience || details.experienceYears || 0,
       hourly_rate: details.hourlyRate || details.rate || 0,
     };
@@ -1026,7 +1028,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
     case 'babysitting':
       if (!serviceDetails.age) errors.push({ field: 'age', message: 'גיל נדרש' });
       else if (parseInt(serviceDetails.age) < 15) errors.push({ field: 'age', message: 'גיל מינימלי: 15 שנים' });
-      if (!serviceDetails.experience) errors.push({ field: 'experience', message: 'שנות ניסיון נדרשות' });
       if (!serviceDetails.ageGroups || serviceDetails.ageGroups.length === 0) {
         errors.push({ field: 'ageGroups', message: 'יש לבחור קבוצות גיל' });
       }
@@ -1052,9 +1053,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       if (!serviceDetails.cleaningTypes || serviceDetails.cleaningTypes.length === 0) {
         errors.push({ field: 'cleaningTypes', message: 'יש לבחור סוגי ניקיון' });
       }
-      if (!serviceDetails.frequency || serviceDetails.frequency.length === 0) {
-        errors.push({ field: 'frequency', message: 'יש לבחור תדירות' });
-      }
       break;
 
     case 'gardening':
@@ -1077,15 +1075,11 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
         errors.push({ field: 'dogSizes', message: 'יש לבחור גודל חיה' });
       }
       if (!serviceDetails.location) errors.push({ field: 'location', message: 'מקום השמירה נדרש' });
-      if (!serviceDetails.experience) errors.push({ field: 'experience', message: 'ניסיון נדרש' });
       break;
 
     case 'tutoring':
       if (!serviceDetails.subjects || serviceDetails.subjects.length === 0) {
         errors.push({ field: 'subjects', message: 'יש לבחור מקצועות' });
-      }
-      if (!serviceDetails.levels || serviceDetails.levels.length === 0) {
-        errors.push({ field: 'levels', message: 'יש לבחור רמות לימוד' });
       }
       if (!serviceDetails.teachingMode) {
         errors.push({ field: 'teachingMode', message: 'אופן הוראה נדרש' });
@@ -1101,9 +1095,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       }
       if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
         errors.push({ field: 'availability_hours', message: 'יש לבחור זמינות' });
-      }
-      if (!serviceDetails.experience) {
-        errors.push({ field: 'experience', message: 'ניסיון עם קשישים נדרש' });
       }
       if (!serviceDetails.age) {
         errors.push({ field: 'age', message: 'גיל נדרש' });
@@ -1126,15 +1117,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       break;
 
     case 'electrician':
-      if (!serviceDetails.age) {
-        errors.push({ field: 'age', message: 'גיל נדרש' });
-      } else if (parseInt(serviceDetails.age) < 18) {
-        errors.push({ field: 'age', message: 'גיל מינימלי: 18 שנים' });
-      }
-      if (!serviceDetails.experience) errors.push({ field: 'experience', message: 'שנות ניסיון נדרשות' });
-      if (!serviceDetails.availability_days || serviceDetails.availability_days.length === 0) {
-        errors.push({ field: 'availability_days', message: 'יש לבחור ימי זמינות' });
-      }
       if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
         errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
       }
@@ -1153,15 +1135,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       break;
 
     case 'plumbing':
-      if (!serviceDetails.age) {
-        errors.push({ field: 'age', message: 'גיל נדרש' });
-      } else if (parseInt(serviceDetails.age) < 18) {
-        errors.push({ field: 'age', message: 'גיל מינימלי: 18 שנים' });
-      }
-      if (!serviceDetails.experience) errors.push({ field: 'experience', message: 'שנות ניסיון נדרשות' });
-      if (!serviceDetails.availability_days || serviceDetails.availability_days.length === 0) {
-        errors.push({ field: 'availability_days', message: 'יש לבחור ימי זמינות' });
-      }
       if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
         errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
       }
@@ -1183,15 +1156,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       break;
 
     case 'air_conditioning':
-      if (!serviceDetails.age) {
-        errors.push({ field: 'age', message: 'גיל נדרש' });
-      } else if (parseInt(serviceDetails.age) < 18) {
-        errors.push({ field: 'age', message: 'גיל מינימלי: 18 שנים' });
-      }
-      if (!serviceDetails.experience) errors.push({ field: 'experience', message: 'שנות ניסיון נדרשות' });
-      if (!serviceDetails.availability_days || serviceDetails.availability_days.length === 0) {
-        errors.push({ field: 'availability_days', message: 'יש לבחור ימי זמינות' });
-      }
       if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
         errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
       }
@@ -1210,15 +1174,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       break;
 
     case 'gas_technician':
-      if (!serviceDetails.age) {
-        errors.push({ field: 'age', message: 'גיל נדרש' });
-      } else if (parseInt(serviceDetails.age) < 18) {
-        errors.push({ field: 'age', message: 'גיל מינימלי: 18 שנים' });
-      }
-      if (!serviceDetails.experience) errors.push({ field: 'experience', message: 'שנות ניסיון נדרשות' });
-      if (!serviceDetails.availability_days || serviceDetails.availability_days.length === 0) {
-        errors.push({ field: 'availability_days', message: 'יש לבחור ימי זמינות' });
-      }
       if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
         errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
       }
@@ -1234,15 +1189,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       break;
 
     case 'drywall':
-      if (!serviceDetails.age) {
-        errors.push({ field: 'age', message: 'גיל נדרש' });
-      } else if (parseInt(serviceDetails.age) < 18) {
-        errors.push({ field: 'age', message: 'גיל מינימלי: 18 שנים' });
-      }
-      if (!serviceDetails.experience) errors.push({ field: 'experience', message: 'שנות ניסיון נדרשות' });
-      if (!serviceDetails.availability_days || serviceDetails.availability_days.length === 0) {
-        errors.push({ field: 'availability_days', message: 'יש לבחור ימי זמינות' });
-      }
       if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
         errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
       }
@@ -1258,15 +1204,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       break;
 
     case 'carpentry':
-      if (!serviceDetails.age) {
-        errors.push({ field: 'age', message: 'גיל נדרש' });
-      } else if (parseInt(serviceDetails.age) < 18) {
-        errors.push({ field: 'age', message: 'גיל מינימלי: 18 שנים' });
-      }
-      if (!serviceDetails.experience) errors.push({ field: 'experience', message: 'שנות ניסיון נדרשות' });
-      if (!serviceDetails.availability_days || serviceDetails.availability_days.length === 0) {
-        errors.push({ field: 'availability_days', message: 'יש לבחור ימי זמינות' });
-      }
       if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
         errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
       }
@@ -1285,15 +1222,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       break;
 
     case 'home_organization':
-      if (!serviceDetails.age) {
-        errors.push({ field: 'age', message: 'גיל נדרש' });
-      } else if (parseInt(serviceDetails.age) < 18) {
-        errors.push({ field: 'age', message: 'גיל מינימלי: 18 שנים' });
-      }
-      if (!serviceDetails.experience) errors.push({ field: 'experience', message: 'שנות ניסיון נדרשות' });
-      if (!serviceDetails.availability_days || serviceDetails.availability_days.length === 0) {
-        errors.push({ field: 'availability_days', message: 'יש לבחור ימי זמינות' });
-      }
       if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
         errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
       }
@@ -1312,14 +1240,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       break;
 
     case 'event_entertainment':
-      if (!serviceDetails.age) {
-        errors.push({ field: 'age', message: 'גיל נדרש' });
-      } else if (parseInt(serviceDetails.age) < 18) {
-        errors.push({ field: 'age', message: 'גיל מינימלי: 18 שנים' });
-      }
-      if (!serviceDetails.experience) {
-        errors.push({ field: 'experience', message: 'שנות ניסיון נדרשות' });
-      }
       if (!serviceDetails.availability_days || serviceDetails.availability_days.length === 0) {
         errors.push({ field: 'availability_days', message: 'יש לבחור ימי זמינות' });
       }
@@ -1370,15 +1290,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       }
       break;
       case 'private_chef':
-      if (!serviceDetails.age) {
-        errors.push({ field: 'age', message: 'גיל נדרש' });
-      } else if (parseInt(serviceDetails.age) < 18) {
-        errors.push({ field: 'age', message: 'גיל מינימלי: 18 שנים' });
-      }
-      if (!serviceDetails.experience) errors.push({ field: 'experience', message: 'שנות ניסיון נדרשות' });
-      if (!serviceDetails.availability_days || serviceDetails.availability_days.length === 0) {
-        errors.push({ field: 'availability_days', message: 'יש לבחור ימי זמינות' });
-      }
       if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
         errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
       }
@@ -1394,17 +1305,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       break;
 
       case 'painting':
-  if (!serviceDetails.age) {
-    errors.push({ field: 'age', message: 'גיל נדרש' });
-  } else if (parseInt(serviceDetails.age) < 18) {
-    errors.push({ field: 'age', message: 'גיל מינימלי: 18 שנים' });
-  }
-  if (!serviceDetails.experience) {
-    errors.push({ field: 'experience', message: 'שנות ניסיון נדרשות' });
-  }
-  if (!serviceDetails.availability_days || serviceDetails.availability_days.length === 0) {
-    errors.push({ field: 'availability_days', message: 'יש לבחור ימי זמינות' });
-  }
   if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
     errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
   }
@@ -1414,15 +1314,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
   break;
 
   case 'waterproofing':
-  if (!serviceDetails.age) {
-    errors.push({ field: 'age', message: 'גיל נדרש' });
-  } else if (parseInt(serviceDetails.age) < 18) {
-    errors.push({ field: 'age', message: 'גיל מינימלי: 18 שנים' });
-  }
-  if (!serviceDetails.experience) errors.push({ field: 'experience', message: 'שנות ניסיון נדרשות' });
-  if (!serviceDetails.availability_days || serviceDetails.availability_days.length === 0) {
-    errors.push({ field: 'availability_days', message: 'יש לבחור ימי זמינות' });
-  }
   if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
     errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
   }
@@ -1449,15 +1340,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
   }
   break;
 case 'contractor':
-  if (!serviceDetails.age) {
-    errors.push({ field: 'age', message: 'גיל נדרש' });
-  } else if (parseInt(serviceDetails.age) < 18) {
-    errors.push({ field: 'age', message: 'גיל מינימלי: 18 שנים' });
-  }
-  if (!serviceDetails.experience) errors.push({ field: 'experience', message: 'שנות ניסיון נדרשות' });
-  if (!serviceDetails.availability_days || serviceDetails.availability_days.length === 0) {
-    errors.push({ field: 'availability_days', message: 'יש לבחור ימי זמינות' });
-  }
   if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
     errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
   }
@@ -1481,15 +1363,6 @@ case 'contractor':
   }
   break;
   case 'aluminum':
-  if (!serviceDetails.age) {
-    errors.push({ field: 'age', message: 'גיל נדרש' });
-  } else if (parseInt(serviceDetails.age) < 18) {
-    errors.push({ field: 'age', message: 'גיל מינימלי: 18 שנים' });
-  }
-  if (!serviceDetails.experience) errors.push({ field: 'experience', message: 'שנות ניסיון נדרשות' });
-  if (!serviceDetails.availability_days || serviceDetails.availability_days.length === 0) {
-    errors.push({ field: 'availability_days', message: 'יש לבחור ימי זמינות' });
-  }
   if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
     errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
   }
@@ -1511,15 +1384,6 @@ case 'contractor':
   break;
 
   case 'glass_works':
-    if (!serviceDetails.age) {
-      errors.push({ field: 'age', message: 'גיל נדרש' });
-    } else if (parseInt(serviceDetails.age) < 18) {
-      errors.push({ field: 'age', message: 'גיל מינימלי: 18 שנים' });
-    }
-    if (!serviceDetails.experience) errors.push({ field: 'experience', message: 'שנות ניסיון נדרשות' });
-    if (!serviceDetails.availability_days || serviceDetails.availability_days.length === 0) {
-      errors.push({ field: 'availability_days', message: 'יש לבחור ימי זמינות' });
-    }
     if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
       errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
     }
@@ -1547,15 +1411,6 @@ case 'contractor':
     break;
   
     case 'locksmith':
-  if (!serviceDetails.age) {
-    errors.push({ field: 'age', message: 'גיל נדרש' });
-  } else if (parseInt(serviceDetails.age) < 18) {
-    errors.push({ field: 'age', message: 'גיל מינימלי: 18 שנים' });
-  }
-  if (!serviceDetails.experience) errors.push({ field: 'experience', message: 'שנות ניסיון נדרשות' });
-  if (!serviceDetails.availability_days || serviceDetails.availability_days.length === 0) {
-    errors.push({ field: 'availability_days', message: 'יש לבחור ימי זמינות' });
-  }
   if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
     errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
   }
@@ -1575,8 +1430,32 @@ case 'contractor':
     errors.push({ field: 'advanced_systems_types', message: 'יש לבחור לפחות סוג מערכת אחד' });
   }
   break;
+
+  case 'moving':
+    if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
+      errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
+    }
+    break;
+
+  case 'photographer':
+    if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
+      errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
+    }
+    if (!serviceDetails.work_types || serviceDetails.work_types.length === 0) {
+      errors.push({ field: 'work_types', message: 'יש לבחור לפחות סוג עבודה אחד' });
+    }
+    break;
+
+  case 'event_decoration':
+    if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
+      errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
+    }
+    if (!serviceDetails.decoration_types || serviceDetails.decoration_types.length === 0) {
+      errors.push({ field: 'decoration_types', message: 'יש לבחור לפחות סוג עיצוב אחד' });
+    }
+    break;
   }
-  
+
   return errors;
 }
 
@@ -1607,13 +1486,16 @@ async updateFullProfile(profileData) {
       const userUpdateFields = [];
       const userUpdateValues = [];
 
-      if (profileData.firstName) {
-        userUpdateFields.push('first_name = ?');
-        userUpdateValues.push(profileData.firstName);
-      }
-      if (profileData.lastName) {
-        userUpdateFields.push('last_name = ?');
-        userUpdateValues.push(profileData.lastName);
+      // Nom : si activeServiceType fourni → stocké dans service_details (par service), sinon table users (global)
+      if (!profileData.activeServiceType) {
+        if (profileData.firstName) {
+          userUpdateFields.push('first_name = ?');
+          userUpdateValues.push(profileData.firstName);
+        }
+        if (profileData.lastName !== undefined) {
+          userUpdateFields.push('last_name = ?');
+          userUpdateValues.push(profileData.lastName || '');
+        }
       }
       if (profileData.email) {
         userUpdateFields.push('email = ?');
@@ -1708,7 +1590,10 @@ const updatedDetails = {
   experience_years: profileData.experienceYears !== undefined ? parseInt(profileData.experienceYears) || 0 : currentDetails.experience_years,
   hourly_rate: profileData.hourlyRate !== undefined ? parseFloat(profileData.hourlyRate).toFixed(2) : currentDetails.hourly_rate,
   hourlyRate: profileData.hourlyRate !== undefined ? profileData.hourlyRate.toString() : currentDetails.hourlyRate,
-  description: profileData.description !== undefined ? profileData.description : currentDetails.description
+  description: profileData.description !== undefined ? profileData.description : currentDetails.description,
+  // Nom par service : stocké ici pour éviter d'écraser le nom des autres services
+  ...(profileData.firstName !== undefined ? { service_first_name: profileData.firstName } : {}),
+  ...(profileData.lastName !== undefined ? { service_last_name: profileData.lastName || '' } : {})
 };
 
 providerUpdateFields.push('service_details = ?');
@@ -1749,7 +1634,7 @@ providerUpdateValues.push(JSON.stringify(updatedDetails));
 
       // 4. Mettre à jour l'instance actuelle
       if (profileData.firstName) this.first_name = profileData.firstName;
-      if (profileData.lastName) this.last_name = profileData.lastName;
+      if (profileData.lastName !== undefined) this.last_name = profileData.lastName || '';
       if (profileData.email) this.email = profileData.email.toLowerCase().trim();
       if (profileData.phone !== undefined) this.phone = profileData.phone;
 
@@ -1796,7 +1681,7 @@ async getFullProviderProfile() {
 
     // 2. Récupérer les zones de travail
     const workingAreas = await query(
-      'SELECT city, neighborhood FROM provider_working_areas WHERE provider_id = ?',
+      'SELECT DISTINCT city, neighborhood FROM provider_working_areas WHERE provider_id = ?',
       [profile.id]
     );
     console.log('✅ Zones de travail récupérées:', workingAreas.length);
@@ -1934,7 +1819,7 @@ async getProviderProfileForService(serviceType) {
 
     // 2. Récupérer les zones de travail
     const workingAreas = await query(
-      'SELECT city, neighborhood FROM provider_working_areas WHERE provider_id = ?',
+      'SELECT DISTINCT city, neighborhood FROM provider_working_areas WHERE provider_id = ?',
       [profile.id]
     );
     console.log('✅ Zones de travail récupérées:', workingAreas.length);
@@ -1942,12 +1827,16 @@ async getProviderProfileForService(serviceType) {
     // 3. Parser les données JSON
     const parseJsonSafe = (value) => {
       if (!value || value === '' || value === 'null') return [];
-      try {
-        return JSON.parse(value);
-      } catch (e) {
-        console.log('⚠️ Erreur parsing JSON:', value);
-        return [];
+      if (typeof value === 'object') return Array.isArray(value) ? value : [];
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          return [];
+        }
       }
+      return [];
     };
 
  const parseJsonObject = (value) => {
@@ -2000,7 +1889,14 @@ async getProviderProfileForService(serviceType) {
 
 // Parser le JSON d'abord
     const parsedServiceDetails = parseJsonObject(profile.service_details);
-    
+
+    // Normalisation : ancienne valeur combinée → deux valeurs séparées
+    if (Array.isArray(parsedServiceDetails.cleaningTypes) && parsedServiceDetails.cleaningTypes.includes('ניקוי שטיחים וספות')) {
+      parsedServiceDetails.cleaningTypes = parsedServiceDetails.cleaningTypes
+        .filter(v => v !== 'ניקוי שטיחים וספות')
+        .concat(['ניקוי שטיחים', 'ניקוי ספות']);
+    }
+
     const serviceDetails = {
       // Colonnes DB
       experience_years: profile.experience_years || 0,

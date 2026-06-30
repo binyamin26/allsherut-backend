@@ -6,22 +6,31 @@ const { query } = require('../config/database');
 class SubscriptionCronService {
   
   start() {
+    // Keep-alive toutes les 4 min pour empêcher TiDB Cloud Serverless de se mettre en pause
+    cron.schedule('*/4 * * * *', async () => {
+      try {
+        await query('SELECT 1');
+      } catch (e) {
+        console.error('[CRON] keep-alive DB error:', e.message);
+      }
+    });
+
     cron.schedule('0 2 * * *', async () => {
       console.log('[CRON] Vérification des abonnements - ' + new Date().toISOString());
-      
+
       try {
         // DÉSACTIVÉ - Service gratuit pour l'instant
         // await this.checkExpiringSubscriptions();
         // await this.checkExpiredSubscriptions();
         await this.deleteScheduledAccounts();
         // await this.processAutoRenewals();
-        
+
       } catch (error) {
         console.error('[CRON] Erreur:', error);
       }
     });
-    
-    console.log('[CRON] Service démarré - vérification quotidienne à 2h');
+
+    console.log('[CRON] Service démarré - vérification quotidienne à 2h + keep-alive DB toutes les 4 min');
   }
   
   async checkExpiringSubscriptions() {

@@ -8,6 +8,7 @@ const ServiceSubcategory = require('../models/ServiceSubcategory');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const User = require('../models/User');
 const { query, transaction } = require('../config/database');
+const config = require('../config/config');
 
 // =============================================
 // CONFIGURATION DES SERVICES HOMESHERUT
@@ -194,6 +195,32 @@ const SERVICES_CONFIG = {
       'זמינות קבועה'
     ],
     popularCities: ['תל אביב', 'פתח תקווה', 'ראשון לציון', 'חיפה', 'נתניה']
+  },
+
+  pest_control: {
+    key: 'pest_control',
+    name: getServiceLabel('pest_control'),
+    description: 'שירותי הדברה, ריסוס והרחקת מזיקים מקצועיים',
+    icon: 'bug',
+    category: 'household',
+    priceRange: { min: 200, max: 800, currency: 'ILS' },
+    demand: 'גבוה',
+    payingModel: 'provider_pays',
+    freeMonth: true,
+    features: [
+      'שכר גבוה לביקור',
+      'ביקוש קבוע כל השנה',
+      'עבודה עצמאית',
+      'חודש חינם לספקים חדשים',
+      'טיפול במגוון מזיקים'
+    ],
+    requirements: [
+      'ניסיון בהדברה מקצועית',
+      'ציוד הדברה מתאים',
+      'הכרת חומרי ריסוס וטיפול',
+      'זמינות ללקוחות'
+    ],
+    popularCities: ['תל אביב', 'ירושלים', 'חיפה', 'ראשון לציון', 'פתח תקווה']
   }
 };
 
@@ -778,15 +805,20 @@ router.get('/:serviceId/subcategories', async (req, res) => {
 
     console.log(DEV_LOGS.API.REQUEST_RECEIVED, `services/${serviceId}/subcategories`, { grouped });
 
-    // Validation du service ID
-    const validServiceIds = [1, 2, 3, 4, 5, 6];
-    const numericServiceId = parseInt(serviceId);
-    
-    if (!validServiceIds.includes(numericServiceId)) {
-      const { errorResponse, statusCode } = ErrorHandler.notFoundError('service',
-        MESSAGES.ERROR.RESOURCE.SERVICE_NOT_FOUND
-      );
-      return res.status(statusCode).json(errorResponse);
+    // Validation du service ID (numérique ou clé de service)
+    let numericServiceId;
+    const parsedId = parseInt(serviceId, 10);
+    if (!isNaN(parsedId) && String(parsedId) === serviceId.trim()) {
+      numericServiceId = parsedId;
+    } else {
+      const rows = await query('SELECT id FROM services WHERE service_key = ?', [serviceId]);
+      if (!rows.length) {
+        const { errorResponse, statusCode } = ErrorHandler.notFoundError('service',
+          MESSAGES.ERROR.RESOURCE.SERVICE_NOT_FOUND
+        );
+        return res.status(statusCode).json(errorResponse);
+      }
+      numericServiceId = rows[0].id;
     }
 
     // Récupération des sous-catégories
@@ -881,7 +913,7 @@ router.post('/add', authenticateToken, async (req, res) => {
 
       // Copier les zones de travail du service existant pour que le prestataire apparaisse dans les recherches
       const [existingAreas] = await connection.execute(
-        `SELECT pwa.city, pwa.neighborhood
+        `SELECT DISTINCT pwa.city, pwa.neighborhood
          FROM provider_working_areas pwa
          JOIN service_providers sp ON pwa.provider_id = sp.id
          WHERE sp.user_id = ? AND sp.id != ?
@@ -950,14 +982,8 @@ router.delete('/:serviceType', authenticateToken, async (req, res) => {
     }
     
     // Vérifier que le service existe
-    const validServices = [
-      'babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'eldercare',
-      'electrician', 'plumbing', 'air_conditioning', 'gas_technician', 'drywall',
-      'carpentry', 'home_organization', 'event_entertainment', 'private_chef',
-      'painting', 'waterproofing', 'contractor', 'aluminum', 'glass_works',
-      'locksmith', 'property_management', 'laundry'
-    ];
-    
+    const validServices = config.services.available;
+
     if (!validServices.includes(serviceType)) {
       return res.status(400).json({
         success: false,

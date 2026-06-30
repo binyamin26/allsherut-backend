@@ -12,11 +12,11 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   charset: 'utf8mb4',
-timezone: '+03:00', // Israël
-  
-  // Configuration simplifiée pour MySQL2
+  timezone: 'Z',
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  connectTimeout: 30000
+  connectTimeout: 30000,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 300000
 });
 
 // Test de connexion avec retry automatique

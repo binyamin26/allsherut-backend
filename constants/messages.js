@@ -159,7 +159,8 @@ const MESSAGES = {
       gardening: 'גינון', 
       petcare: 'טיפוח חיות מחמד',
       tutoring: 'שיעורים פרטיים',
-      eldercare: 'עזרה לקשישים'
+      eldercare: 'עזרה לקשישים',
+      pest_control: 'הדברה, ריסוס והרחקת מזיקים'
     },
     
     ROLES: {

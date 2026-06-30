@@ -8,8 +8,13 @@ class Review {
     this.provider_id = reviewData.provider_id;
     this.reviewer_email = reviewData.reviewer_email;
     this.reviewer_name = reviewData.reviewer_name;
+    this.reviewerName = reviewData.reviewer_name;
     this.service_type = reviewData.service_type;
     this.rating = reviewData.rating;
+    this.quality_rating = reviewData.quality_rating;
+    this.price_rating = reviewData.price_rating;
+    this.availability_rating = reviewData.availability_rating;
+    this.professionalism_rating = reviewData.professionalism_rating;
     this.title = reviewData.title;
     this.comment = reviewData.comment;
     this.is_verified = reviewData.is_verified;
@@ -17,7 +22,6 @@ class Review {
     this.helpful_count = reviewData.helpful_count;
     this.created_at = reviewData.created_at;
     this.updated_at = reviewData.updated_at;
-    // Nouvelle propriété pour les réponses
     this.provider_response = reviewData.provider_response;
   }
 
@@ -171,29 +175,32 @@ class Review {
  static async createReview(reviewData) {
   return transaction(async (connection) => {
     try {
-      const { 
-        email, verificationCode, providerId, serviceType, 
-        rating, title, comment, displayNameOption = 'private' // AJOUTER ICI
+      const {
+        email, verificationCode, providerId, serviceType,
+        qualityRating, priceRating, availabilityRating, professionalismRating,
+        rating, title, comment, displayNameOption = 'private'
       } = reviewData;
 
-// ✅ CORRECTION: Convertir user_id en service_providers.id si nécessaire
+// Résolution : priorité à sp.id direct, sinon fallback sur user_id
 let actualProviderId = providerId;
-const [spCheck] = await connection.execute(`
-  SELECT sp.id as sp_id 
-  FROM service_providers sp 
-  WHERE sp.id = ? OR sp.user_id = ?
-  LIMIT 1
-`, [providerId, providerId]);
-
-if (spCheck.length > 0) {
-  actualProviderId = spCheck[0].sp_id;
-  console.log(`🔄 Provider ID résolu: ${providerId} → ${actualProviderId}`);
+const [directMatch] = await connection.execute(
+  'SELECT id as sp_id FROM service_providers WHERE id = ? LIMIT 1',
+  [providerId]
+);
+if (directMatch.length > 0) {
+  actualProviderId = directMatch[0].sp_id;
 } else {
-  return { 
-    success: false, 
-    message: 'ספק לא נמצא' 
-  };
+  const [userMatch] = await connection.execute(
+    'SELECT id as sp_id FROM service_providers WHERE user_id = ? LIMIT 1',
+    [providerId]
+  );
+  if (userMatch.length > 0) {
+    actualProviderId = userMatch[0].sp_id;
+  } else {
+    return { success: false, message: 'ספק לא נמצא' };
+  }
 }
+console.log(`🔄 Provider ID résolu: ${providerId} → ${actualProviderId}`);
 
 // Vérifier que le token existe et a été utilisé récemment
 const tokens = await connection.execute(`
@@ -238,11 +245,13 @@ if (displayNameOption === 'anonymous') {
       const [result] = await connection.execute(`
   INSERT INTO reviews (
     provider_id, reviewer_email, reviewer_name, service_type,
-    rating, comment, is_verified, is_published, helpful_count, created_at
-  ) VALUES (?, ?, ?, ?, ?, ?, TRUE, TRUE, 0, NOW())
+    rating, quality_rating, price_rating, availability_rating, professionalism_rating,
+    comment, is_verified, is_published, helpful_count, created_at
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, TRUE, 0, NOW())
 `, [
   actualProviderId, email, reviewerName, serviceType,
-  rating, comment
+  rating, qualityRating, priceRating, availabilityRating, professionalismRating,
+  comment
 ]);
 
         const reviewId = result.insertId;
@@ -338,17 +347,34 @@ await connection.execute(`
  */
 static async getProviderReviews(providerId, options = {}) {
   try {
-    const { 
-      page = 1, 
-      limit = 10, 
-      sortBy = 'newest' 
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'newest'
     } = options;
-    
+
     const offset = (page - 1) * limit;
-    
+
+    // Résoudre l'ID : priorité à sp.id direct, sinon fallback user_id
+    let actualProviderId;
+    const directMatch = await query(
+      'SELECT id as sp_id FROM service_providers WHERE id = ? LIMIT 1',
+      [providerId]
+    );
+    if (directMatch.length > 0) {
+      actualProviderId = directMatch[0].sp_id;
+    } else {
+      const userMatch = await query(
+        'SELECT id as sp_id FROM service_providers WHERE user_id = ? LIMIT 1',
+        [providerId]
+      );
+      if (userMatch.length === 0) return { success: false, message: 'ספק לא נמצא' };
+      actualProviderId = userMatch[0].sp_id;
+    }
+
     // Déterminer l'ordre de tri
-    let orderClause = 'r.created_at DESC'; // Par défaut: plus récents
-    
+    let orderClause = 'r.created_at DESC';
+
     if (sortBy === 'oldest') {
       orderClause = 'r.created_at ASC';
     } else if (sortBy === 'highest_rating') {
@@ -359,18 +385,22 @@ static async getProviderReviews(providerId, options = {}) {
       orderClause = 'r.helpful_count DESC, r.created_at DESC';
     }
 
-    console.log(`📖 Récupération avis provider ${providerId} avec réponses, page ${page}`);
+    console.log(`📖 Récupération avis provider ${providerId} (sp.id=${actualProviderId}) avec réponses, page ${page}`);
 
     // ✅ AJOUT DU LEFT JOIN AVEC provider_responses
     const reviews = await query(`
-      SELECT 
-        r.id, 
-        r.reviewer_name, 
-        r.service_type, 
-        r.rating, 
-        r.title, 
+      SELECT
+        r.id,
+        r.reviewer_name,
+        r.service_type,
+        r.rating,
+        r.quality_rating,
+        r.price_rating,
+        r.availability_rating,
+        r.professionalism_rating,
+        r.title,
         r.comment,
-        r.helpful_count, 
+        r.helpful_count,
         r.created_at,
         r.updated_at,
         pr.response_text as provider_response,
@@ -378,29 +408,29 @@ static async getProviderReviews(providerId, options = {}) {
         pr.provider_user_id as response_author_id
       FROM reviews r
       LEFT JOIN provider_responses pr ON r.id = pr.review_id
-      WHERE r.provider_id = ? 
-        AND r.is_verified = TRUE 
+      WHERE r.provider_id = ?
+        AND r.is_verified = TRUE
         AND r.is_published = TRUE
       ORDER BY ${orderClause}
       LIMIT ? OFFSET ?
-    `, [providerId, limit, offset]);
+    `, [actualProviderId, limit, offset]);
 
     // Compter le total d'avis
     const countResult = await query(`
       SELECT COUNT(*) as total
       FROM reviews r
-      WHERE r.provider_id = ? 
-        AND r.is_verified = TRUE 
+      WHERE r.provider_id = ?
+        AND r.is_verified = TRUE
         AND r.is_published = TRUE
-    `, [providerId]);
+    `, [actualProviderId]);
 
     const totalReviews = countResult[0].total;
     const totalPages = Math.ceil(totalReviews / limit);
 
     // Récupérer les statistiques
-    const stats = await Review.getProviderStats(providerId);
+    const stats = await Review.getProviderStats(actualProviderId);
 
-    console.log(`✅ Trouvé ${reviews.length} avis pour provider ${providerId}`);
+    console.log(`✅ Trouvé ${reviews.length} avis pour provider ${providerId} (sp.id=${actualProviderId})`);
 
     return {
       success: true,
@@ -445,16 +475,15 @@ static async getProviderReviews(providerId, options = {}) {
   static async getProviderStats(providerId) {
     try {
       const stats = await query(`
-        SELECT 
+        SELECT
           COUNT(*) as total_reviews,
           AVG(rating) as average_rating,
-          COUNT(CASE WHEN rating = 5 THEN 1 END) as five_stars,
-          COUNT(CASE WHEN rating = 4 THEN 1 END) as four_stars,
-          COUNT(CASE WHEN rating = 3 THEN 1 END) as three_stars,
-          COUNT(CASE WHEN rating = 2 THEN 1 END) as two_stars,
-          COUNT(CASE WHEN rating = 1 THEN 1 END) as one_star,
+          AVG(quality_rating) as avg_quality,
+          AVG(price_rating) as avg_price,
+          AVG(availability_rating) as avg_availability,
+          AVG(professionalism_rating) as avg_professionalism,
           SUM(helpful_count) as total_helpful
-        FROM reviews 
+        FROM reviews
         WHERE provider_id = ? AND is_verified = TRUE AND is_published = TRUE
       `, [providerId]);
 
@@ -471,13 +500,10 @@ static async getProviderReviews(providerId, options = {}) {
       return {
         total_reviews: stat.total_reviews,
         average_rating: parseFloat(stat.average_rating || 0).toFixed(1),
-        rating_distribution: [
-          stat.one_star || 0,
-          stat.two_stars || 0, 
-          stat.three_stars || 0,
-          stat.four_stars || 0,
-          stat.five_stars || 0
-        ],
+        avg_quality: stat.avg_quality ? parseFloat(stat.avg_quality).toFixed(1) : null,
+        avg_price: stat.avg_price ? parseFloat(stat.avg_price).toFixed(1) : null,
+        avg_availability: stat.avg_availability ? parseFloat(stat.avg_availability).toFixed(1) : null,
+        avg_professionalism: stat.avg_professionalism ? parseFloat(stat.avg_professionalism).toFixed(1) : null,
         total_helpful: stat.total_helpful || 0
       };
 
@@ -714,6 +740,10 @@ return {
       reviewerName: this.reviewer_name,
       serviceType: this.service_type,
       rating: this.rating,
+      quality_rating: this.quality_rating,
+      price_rating: this.price_rating,
+      availability_rating: this.availability_rating,
+      professionalism_rating: this.professionalism_rating,
       title: this.title,
       comment: this.comment,
       isVerified: this.is_verified,
