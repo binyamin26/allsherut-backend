@@ -469,6 +469,31 @@ getEmailHeader(subtitle = '') {
   }
 
   // ============================================
+  // TEMPLATE: Lead Notification (client left phone number)
+  // ============================================
+  getLeadNotificationTemplate({ clientPhone, providerName, serviceName, action }) {
+    const timestamp = new Date().toLocaleString('he-IL', {
+      timeZone: 'Asia/Jerusalem', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    const actionLabel = action === 'whatsapp' ? 'וואטסאפ' : 'שיחת טלפון';
+
+    return `
+      ${this.getEmailHeader('📞 ליד חדש מהאתר')}
+          <div style="padding: 40px; direction: rtl;">
+            <div style="background: #fffbeb; border-right: 3px solid #f59e0b; color: #92400e; padding: 12px 18px; border-radius: 10px; margin-bottom: 25px; font-size: 14px; font-weight: 600;">
+              📅 התקבל ב: ${timestamp}
+            </div>
+
+            ${this._contactField('מספר טלפון של הלקוח', `<a href="tel:${clientPhone}" style="color: #2F80ED; text-decoration: none; font-weight: 700;">${clientPhone}</a>`)}
+            ${this._contactField('פעולה שנבחרה', actionLabel)}
+            ${providerName ? this._contactField('ספק השירות', providerName) : ''}
+            ${serviceName ? this._contactField('סוג השירות', serviceName) : ''}
+          </div>
+      ${this.getEmailFooter()}
+    `;
+  }
+
+  // ============================================
   // MÉTHODES D'ENVOI
   // ============================================
 
@@ -545,6 +570,15 @@ getEmailHeader(subtitle = '') {
 
   async sendDeletionCancelledEmail(email, firstName) {
     return this._sendMail(email, '✅ המנוי שלך ממשיך - AllSherut', this.getDeletionCancelledTemplate(firstName));
+  }
+
+  async sendLeadNotificationEmail({ clientPhone, providerName, serviceName, action }) {
+    const adminEmail = process.env.ADMIN_EMAIL || 'allsherutcontact@gmail.com';
+    return this._sendMail(
+      adminEmail,
+      `📞 ליד חדש${providerName ? ` - ${providerName}` : ''}`,
+      this.getLeadNotificationTemplate({ clientPhone, providerName, serviceName, action })
+    );
   }
 
   async verifyConnection() {
