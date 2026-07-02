@@ -23,23 +23,11 @@ const { query } = require('../config/database');
 // ===== FONCTION DE VALIDATION SÉCURISÉE DES MOTS DE PASSE =====
 const validatePasswordComplexity = (password) => {
   const errors = [];
-  
-  if (password.length < 8) {
-    errors.push(MESSAGES.ERROR.VALIDATION.PASSWORD_COMPLEXITY);
+
+  if (password.length < 6) {
+    errors.push('הסיסמה חייבת להכיל לפחות 6 תווים');
   }
-  
-  if (!/(?=.*[a-z])/.test(password)) {
-    errors.push('הסיסמה חייבת להכיל לפחות אות קטנה באנגלית');
-  }
-  
-  if (!/(?=.*[A-Z])/.test(password)) {
-    errors.push('הסיסמה חייבת להכיל לפחות אות גדולה באנגלית');
-  }
-  
-  if (!/(?=.*\d)/.test(password)) {
-    errors.push('הסיסמה חייבת להכיל לפחות ספרה אחת');
-  }
-  
+
   return errors;
 };
 
@@ -225,23 +213,14 @@ router.post('/register',
     // Validation conditionnelle pour providers
     body('serviceType').custom((value, { req }) => {
       if (req.body.role === 'provider') {
-     const availableServices = ['babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'eldercare', 'laundry', 'property_management', 'electrician', 'plumbing', 'air_conditioning', 'gas_technician', 'drywall', 'carpentry', 'home_organization', 'event_entertainment', 'private_chef', 'painting', 'waterproofing', 'contractor','aluminum','glass_works', 'locksmith']; // Ajout du service 'contractor'
+     const availableServices = config.services.available;
         if (!value || !availableServices.includes(value)) {
           throw new Error('סוג שירות נדרש לספקים');
         }
       }
       return true;
     }),
-body('phone').custom((value, { req }) => {
-  // Pour tous (clients et providers): phone optionnel mais si fourni, doit être valide
-  if (value) {
-    const cleaned = value.replace(/[\s\-.()/]/g, '');
-    if (!cleaned.match(/^05\d{8}$/)) {
-      throw new Error(MESSAGES.ERROR.VALIDATION.INVALID_PHONE);
-    }
-  }
-  return true;
-})
+body('phone').optional()
 
   ],
   async (req, res) => {
@@ -253,9 +232,7 @@ body('phone').custom((value, { req }) => {
       // ✅ VALIDATION UNIFIÉE
       const validationErrors = validationResult(req);
       if (!validationErrors.isEmpty()) {
-       
-      
-        
+        console.log('❌ REGISTER validation errors:', JSON.stringify(validationErrors.array()));
         return res.validationError(
           validationErrors.array().map(err => ({
             field: err.path,
@@ -315,9 +292,10 @@ if (role === 'provider' && userData.tranziliaToken) {
           const workingAreas = JSON.parse(req.body.workingAreas || '[]');
 
           // Validation Step 2
+          console.log('🔍 STEP2 DATA:', JSON.stringify({ serviceType, workingAreas, serviceDetails }));
           const step2Errors = User.validateProviderStep2(serviceType, serviceDetails, workingAreas);
           if (step2Errors.length > 0) {
-            
+            console.log('❌ STEP2 errors:', JSON.stringify(step2Errors));
             return res.validationError(step2Errors);
           }
 
@@ -338,11 +316,11 @@ if (role === 'provider' && userData.tranziliaToken) {
           console.log(DEV_LOGS.BUSINESS.PROFILE_COMPLETED, user.id);
 
         } catch (parseError) {
-          console.error(DEV_LOGS.API.ERROR_OCCURRED, 'Step 2 data parsing:', parseError);
-          
+          console.error('❌ REGISTER STEP2 ERROR:', parseError?.message, parseError?.code, parseError?.sqlMessage);
+
 return res.status(400).json({
   success: false,
-  message: 'נתונים לא תקינים'
+  message: parseError?.sqlMessage || parseError?.message || 'נתונים לא תקינים'
 });
         }
       }
@@ -847,8 +825,8 @@ if (providerProfile && providerProfile.profileImage) {
 // =============================================
 router.put('/me', authenticateToken, [
   body('firstName').optional().trim().isLength({ min: 2 }).withMessage('שם פרטי נדרש'),
-  body('lastName').optional().trim(),
-  body('phone').optional().customSanitizer(v => v?.replace(/[\s\-(). /]/g, '')).matches(/^05\d{8}$/).withMessage(MESSAGES.ERROR.VALIDATION.INVALID_PHONE)
+  body('lastName').optional().trim().isLength({ min: 2 }).withMessage('שם משפחה נדרש'),
+  body('phone').optional()
 ], async (req, res) => {
   try {
     const validationErrors = validationResult(req);
@@ -864,7 +842,7 @@ router.put('/me', authenticateToken, [
     // Préparer les données à mettre à jour
     const updateData = {};
     if (req.body.firstName) updateData.first_name = req.body.firstName;
-    if (req.body.lastName !== undefined) updateData.last_name = req.body.lastName || '';
+    if (req.body.lastName) updateData.last_name = req.body.lastName;
     if (req.body.phone) updateData.phone = req.body.phone;
     if (req.body.profileImage !== undefined) updateData.profile_image = req.body.profileImage;
 
@@ -1175,10 +1153,10 @@ router.post('/check-identity', async (req, res) => {
     if (phone) {
       const cleanPhone = phone.replace(/[\s-]/g, '');
       const [phoneResults] = await query(
-        `SELECT CONCAT(first_name, ' ', last_name) as full_name FROM users 
-WHERE phone = ? 
+        `SELECT CONCAT(first_name, ' ', last_name) as full_name FROM users
+WHERE phone = ?
 AND LOWER(TRIM(CONCAT(first_name, ' ', last_name))) != ?
-         AND deleted_at IS NULL
+         AND is_active = TRUE
          LIMIT 1`,
         [cleanPhone, normalizedName]
       );
@@ -1195,10 +1173,10 @@ AND LOWER(TRIM(CONCAT(first_name, ' ', last_name))) != ?
     // Vérifier si l'email existe avec un nom différent
     if (email) {
      const [emailResults] = await query(
-  `SELECT CONCAT(first_name, ' ', last_name) as full_name FROM users 
-   WHERE email = ? 
+  `SELECT CONCAT(first_name, ' ', last_name) as full_name FROM users
+   WHERE email = ?
    AND LOWER(TRIM(CONCAT(first_name, ' ', last_name))) != ?
-         AND deleted_at IS NULL
+         AND is_active = TRUE
          LIMIT 1`,
         [email.toLowerCase().trim(), normalizedName]
       );
@@ -1231,14 +1209,9 @@ router.put('/update-full-profile',
   authenticateToken,
   [
     body('firstName').optional().trim().isLength({ min: 2 }).withMessage('שם פרטי נדרש'),
-    body('lastName').optional().trim().isLength({ min: 2 }).withMessage('שם משפחה נדרש'),
+    body('lastName').optional({ checkFalsy: true }).trim().isLength({ min: 2 }).withMessage('שם משפחה נדרש'),
     body('email').optional().isEmail().toLowerCase().withMessage(MESSAGES.ERROR.VALIDATION.INVALID_EMAIL),
-    body('phone').optional().custom((value) => {
-      if (value && !value.match(/^05\d{8}$/)) {
-        throw new Error(MESSAGES.ERROR.VALIDATION.INVALID_PHONE);
-      }
-      return true;
-    }),
+    body('phone').optional(),
 body('experienceYears').optional({ nullable: true, checkFalsy: true }).isInt({ min: 0 }).withMessage('ניסיון חייב להיות מספר חיובי'),
 body('hourlyRate').optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0 }).withMessage('תעריף חייב להיות מספר חיובי')
   ],

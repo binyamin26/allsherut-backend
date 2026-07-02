@@ -9,6 +9,27 @@ const ResponseHelper = require('../utils/responseHelper');
 // Middleware pour les réponses standardisées
 router.use(ResponseHelper.middleware);
 
+// Route de diagnostic temporaire — vérifier le tri des reviews cleaning
+router.get('/debug/cleaning-sort', async (req, res) => {
+  try {
+    const rows = await query(`
+      SELECT
+        sp.id AS provider_id,
+        CONCAT(u.first_name, ' ', u.last_name) AS nom,
+        sp.average_rating,
+        (SELECT COUNT(DISTINCT r.id) FROM reviews r WHERE r.provider_id = sp.id AND r.is_verified = TRUE AND r.is_published = TRUE) AS nb_avis_verified,
+        (SELECT COUNT(DISTINCT r.id) FROM reviews r WHERE r.provider_id = sp.id) AS nb_avis_total
+      FROM service_providers sp
+      JOIN users u ON u.id = sp.user_id
+      WHERE sp.service_type = 'cleaning' AND sp.is_active = TRUE
+      ORDER BY nb_avis_verified DESC, sp.average_rating DESC
+    `);
+    res.json({ success: true, version: 'inline-subquery-v2', data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Configuration des filtres avancés côté backend
 const buildAdvancedFilters = (serviceType, filters) => {
   const conditions = [];
@@ -25,15 +46,31 @@ const buildAdvancedFilters = (serviceType, filters) => {
     console.log(`[buildAdvancedFilters] Traitement ${key}:`, value);
 
     switch (key) {
-      case 'ageGroups':
+      case 'ageGroups': {
         const ageGroupsArray = value.split(',').map(v => v.trim());
         if (ageGroupsArray.length > 0) {
           const placeholders = ageGroupsArray.map(() => '?').join(',');
-          conditions.push(`JSON_OVERLAPS(sp.availability->'$.ageGroups', JSON_ARRAY(${placeholders}))`);
+          if (serviceType === 'tutoring') {
+            conditions.push(`JSON_OVERLAPS(sp.service_details->'$.ageGroups', JSON_ARRAY(${placeholders}))`);
+          } else {
+            conditions.push(`JSON_OVERLAPS(sp.availability->'$.ageGroups', JSON_ARRAY(${placeholders}))`);
+          }
           params.push(...ageGroupsArray);
           console.log(`[buildAdvancedFilters] Condition ageGroups ajoutée:`, ageGroupsArray);
         }
         break;
+      }
+
+      case 'levels': {
+        const levelsArray = value.split(',').map(v => v.trim());
+        if (levelsArray.length > 0) {
+          const placeholders = levelsArray.map(() => '?').join(',');
+          conditions.push(`JSON_OVERLAPS(sp.service_details->'$.levels', JSON_ARRAY(${placeholders}))`);
+          params.push(...levelsArray);
+          console.log(`[buildAdvancedFilters] Condition levels ajoutée:`, levelsArray);
+        }
+        break;
+      }
 
       case 'availability':
         const availabilityArray = value.split(',').map(v => v.trim());
@@ -121,6 +158,93 @@ case 'can_travel_alone':
   params.push(canTravelValue);
   console.log(`[buildAdvancedFilters] Condition can_travel_alone ajoutée:`, canTravelValue);
   break;
+
+case 'event_types': {
+  const eventTypesArray = value.split(',').map(v => v.trim());
+  if (eventTypesArray.length > 0) {
+    const placeholders = eventTypesArray.map(() => '?').join(',');
+    conditions.push(`JSON_OVERLAPS(sp.service_details->'$.event_types', JSON_ARRAY(${placeholders}))`);
+    params.push(...eventTypesArray);
+    console.log(`[buildAdvancedFilters] Condition event_types ajoutée:`, eventTypesArray);
+  }
+  break;
+}
+
+case 'work_types': {
+  const workTypesArray = value.split(',').map(v => v.trim());
+  if (workTypesArray.length > 0) {
+    const placeholders = workTypesArray.map(() => '?').join(',');
+    conditions.push(`JSON_OVERLAPS(sp.service_details->'$.work_types', JSON_ARRAY(${placeholders}))`);
+    params.push(...workTypesArray);
+    console.log(`[buildAdvancedFilters] Condition work_types ajoutée:`, workTypesArray);
+  }
+  break;
+}
+case 'decoration_types': {
+  const decorationTypesArray = value.split(',').map(v => v.trim());
+  if (decorationTypesArray.length > 0) {
+    const placeholders = decorationTypesArray.map(() => '?').join(',');
+    conditions.push(`JSON_OVERLAPS(sp.service_details->'$.decoration_types', JSON_ARRAY(${placeholders}))`);
+    params.push(...decorationTypesArray);
+    console.log(`[buildAdvancedFilters] Condition decoration_types ajoutée:`, decorationTypesArray);
+  }
+  break;
+}
+
+case 'magnets': {
+  if (value === 'true') {
+    conditions.push(`JSON_EXTRACT(sp.service_details, '$.magnets') = TRUE`);
+    console.log(`[buildAdvancedFilters] Condition magnets ajoutée`);
+  }
+  break;
+}
+
+case 'general_repairs_types': {
+  const arr = value.split(',').map(v => v.trim());
+  if (arr.length > 0) {
+    const placeholders = arr.map(() => '?').join(',');
+    conditions.push(`JSON_OVERLAPS(sp.service_details->'$.general_repairs_types', JSON_ARRAY(${placeholders}))`);
+    params.push(...arr);
+  }
+  break;
+}
+case 'installations_types': {
+  const arr = value.split(',').map(v => v.trim());
+  if (arr.length > 0) {
+    const placeholders = arr.map(() => '?').join(',');
+    conditions.push(`JSON_OVERLAPS(sp.service_details->'$.installations_types', JSON_ARRAY(${placeholders}))`);
+    params.push(...arr);
+  }
+  break;
+}
+case 'doors_furniture_types': {
+  const arr = value.split(',').map(v => v.trim());
+  if (arr.length > 0) {
+    const placeholders = arr.map(() => '?').join(',');
+    conditions.push(`JSON_OVERLAPS(sp.service_details->'$.doors_furniture_types', JSON_ARRAY(${placeholders}))`);
+    params.push(...arr);
+  }
+  break;
+}
+case 'light_work_types': {
+  const arr = value.split(',').map(v => v.trim());
+  if (arr.length > 0) {
+    const placeholders = arr.map(() => '?').join(',');
+    conditions.push(`JSON_OVERLAPS(sp.service_details->'$.light_work_types', JSON_ARRAY(${placeholders}))`);
+    params.push(...arr);
+  }
+  break;
+}
+case 'hanging_types': {
+  const arr = value.split(',').map(v => v.trim());
+  if (arr.length > 0) {
+    const placeholders = arr.map(() => '?').join(',');
+    conditions.push(`JSON_OVERLAPS(sp.service_details->'$.hanging_types', JSON_ARRAY(${placeholders}))`);
+    params.push(...arr);
+  }
+  break;
+}
+
 case 'minAge':
   if (!isNaN(parseInt(value))) {
     conditions.push(`sp.service_details->>'$.age' >= ?`);
@@ -216,15 +340,6 @@ case 'qualifications':
         }
         break;
 
-      case 'frequency':
-        const frequencyArray = value.split(',').map(v => v.trim());
-        if (frequencyArray.length > 0) {
-          const placeholders = frequencyArray.map(() => '?').join(',');
-          conditions.push(`JSON_OVERLAPS(sp.availability->'$.frequency', JSON_ARRAY(${placeholders}))`);
-          params.push(...frequencyArray);
-        }
-        break;
-
       case 'materialsProvided':
         conditions.push(`sp.availability->>'$.materialsProvided' = ?`);
         params.push(value);
@@ -265,6 +380,7 @@ router.get('/providers', async (req, res) => {
       service,
       city,
       neighborhood,
+      area,
       minPrice,
       maxPrice,
       sortBy = 'newest',
@@ -288,7 +404,7 @@ router.get('/providers', async (req, res) => {
 
     // Validation du service si fourni
     if (service) {
-const validServices = ['babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'eldercare', 'laundry', 'property_management', 'electrician', 'plumbing','air_conditioning', 'gas_technician','drywall', 'carpentry', 'home_organization', 'event_entertainment', 'private_chef', 'painting', 'waterproofing', 'contractor','aluminum','glass_works', 'locksmith', 'moving', 'photographer'];
+const validServices = ['babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'sports_activities', 'eldercare', 'laundry', 'property_management', 'electrician', 'plumbing','air_conditioning', 'gas_technician','drywall', 'carpentry', 'home_organization', 'event_entertainment', 'dj', 'private_chef', 'painting', 'waterproofing', 'contractor','aluminum','glass_works', 'locksmith', 'moving', 'photographer', 'event_decoration', 'pest_control', 'handyman', 'mechanic', 'metalwork', 'driver'];
       if (!validServices.includes(service)) {
         const { errorResponse, statusCode } = ErrorHandler.validationError([{
           field: 'service',
@@ -314,12 +430,32 @@ const validServices = ['babysitting', 'cleaning', 'gardening', 'petcare', 'tutor
   console.log(DEV_LOGS.API.REQUEST_RECEIVED, `Filtre service: ${service}`);
 }
 
-   if (city) {
-  whereConditions.push(`EXISTS (SELECT 1 FROM provider_working_areas pwa WHERE pwa.provider_id = sp.id AND pwa.city LIKE ?)`);
+   if (city && neighborhood) {
+  // Quartier sélectionné : ce quartier + toute la ville + tout le région + tout Israël
+  whereConditions.push(`EXISTS (
+    SELECT 1 FROM provider_working_areas pwa
+    WHERE pwa.provider_id = sp.id
+    AND (
+      (pwa.city LIKE ? AND (pwa.neighborhood LIKE ? OR pwa.neighborhood IN ('כל העיר', 'כל השכונות')))
+      OR (? != '' AND pwa.city = ? AND pwa.neighborhood = 'כל האזור')
+      OR pwa.neighborhood = 'כל ישראל'
+      OR pwa.city = 'ישראל'
+    )
+  )`);
+  params.push(`%${city}%`, `%${neighborhood}%`, area || '', area || '');
+} else if (city) {
+  // Ville sélectionnée : uniquement cette ville + tout Israël (pas les "כל האזור" d'autres villes)
+  whereConditions.push(`EXISTS (
+    SELECT 1 FROM provider_working_areas pwa
+    WHERE pwa.provider_id = sp.id
+    AND (
+      pwa.city LIKE ?
+      OR pwa.neighborhood = 'כל ישראל'
+      OR pwa.city = 'ישראל'
+    )
+  )`);
   params.push(`%${city}%`);
-}
-
-if (neighborhood) {
+} else if (neighborhood) {
   whereConditions.push(`EXISTS (SELECT 1 FROM provider_working_areas pwa WHERE pwa.provider_id = sp.id AND pwa.neighborhood LIKE ?)`);
   params.push(`%${neighborhood}%`);
 }
@@ -372,14 +508,18 @@ if (neighborhood) {
     }
 
     // ✅ AJOUTER ICI - Filtre rating minimum
-if (advancedFilters.minRating && !isNaN(parseInt(advancedFilters.minRating))) {
-  const minRatingValue = parseInt(advancedFilters.minRating);
+if (advancedFilters.minRating && !isNaN(parseFloat(advancedFilters.minRating))) {
+  const minRatingValue = parseFloat(advancedFilters.minRating);
   whereConditions.push(`sp.average_rating >= ?`);
   params.push(minRatingValue);
   console.log(`[Filtre minRating] Ajouté: >= ${minRatingValue}`);
   // Supprimer de advancedFilters pour ne pas le traiter 2 fois
   delete advancedFilters.minRating;
 }
+
+// Supprimer les champs de localisation qui ne sont pas des filtres de service
+delete advancedFilters.area;
+delete advancedFilters.fullLocation;
 
     if (featured === 'true') {
       whereConditions.push(`sp.is_featured = 1`);
@@ -406,35 +546,35 @@ if (advancedFilters.minRating && !isNaN(parseInt(advancedFilters.minRating))) {
 
     const whereClause = `WHERE ${whereConditions.join(' AND ')}`;
 
-    // Définition du tri
-    let orderClause = 'ORDER BY u.created_at DESC';
-    const validSortOptions = ['newest', 'oldest', 'price_asc', 'price_desc', 'rating', 'experience'];
-    
-    if (validSortOptions.includes(sortBy)) {
-      switch (sortBy) {
-        case 'oldest':
-          orderClause = 'ORDER BY u.created_at ASC';
-          break;
-        case 'price_asc':
-          orderClause = 'ORDER BY sp.hourly_rate ASC';
-          break;
-        case 'price_desc':
-          orderClause = 'ORDER BY sp.hourly_rate DESC';
-          break;
-        case 'rating':
-          orderClause = 'ORDER BY sp.average_rating DESC, sp.total_reviews DESC';
-          break;
-        case 'experience':
-          orderClause = 'ORDER BY sp.experience_years DESC';
-          break;
-        default:
-          orderClause = `ORDER BY 
-            (u.premium_until > NOW()) DESC,
-            sp.is_featured DESC,
-            sp.average_rating DESC,
-            u.created_at DESC`;
-      }
+    // Sous-requêtes location : si ville filtrée, on affiche en priorité cette ville
+    const selectParams = [];
+    let locationCitySubquery, locationAreaSubquery;
+    if (city) {
+      locationCitySubquery = `COALESCE(
+        (SELECT pwa.city FROM provider_working_areas pwa WHERE pwa.provider_id = sp.id AND pwa.city LIKE ? LIMIT 1),
+        (SELECT 'כל ישראל' FROM provider_working_areas pwa WHERE pwa.provider_id = sp.id AND (pwa.neighborhood = 'כל ישראל' OR pwa.city = 'ישראל') LIMIT 1),
+        (SELECT pwa.city FROM provider_working_areas pwa WHERE pwa.provider_id = sp.id LIMIT 1)
+      )`;
+      locationAreaSubquery = `COALESCE(
+        (SELECT pwa.neighborhood FROM provider_working_areas pwa WHERE pwa.provider_id = sp.id AND pwa.city LIKE ? LIMIT 1),
+        (SELECT pwa.neighborhood FROM provider_working_areas pwa WHERE pwa.provider_id = sp.id AND (pwa.neighborhood = 'כל ישראל' OR pwa.city = 'ישראל') LIMIT 1),
+        (SELECT pwa.neighborhood FROM provider_working_areas pwa WHERE pwa.provider_id = sp.id LIMIT 1)
+      )`;
+      selectParams.push(`%${city}%`, `%${city}%`);
+    } else {
+      locationCitySubquery = `(SELECT pwa.city FROM provider_working_areas pwa WHERE pwa.provider_id = sp.id LIMIT 1)`;
+      locationAreaSubquery = `(SELECT pwa.neighborhood FROM provider_working_areas pwa WHERE pwa.provider_id = sp.id LIMIT 1)`;
     }
+
+    // Définition du tri — par défaut : avis vérifiés en premier
+    const SORT_REVIEWS = `(SELECT COUNT(DISTINCT r.id) FROM reviews r WHERE r.provider_id = sp.id AND r.is_verified = TRUE AND r.is_published = TRUE)`;
+    let orderClause = `ORDER BY ${SORT_REVIEWS} DESC, sp.average_rating DESC, sp.is_featured DESC, u.created_at DESC`;
+
+    if (sortBy === 'oldest')     orderClause = 'ORDER BY u.created_at ASC';
+    if (sortBy === 'price_asc')  orderClause = 'ORDER BY sp.hourly_rate ASC';
+    if (sortBy === 'price_desc') orderClause = 'ORDER BY sp.hourly_rate DESC';
+    if (sortBy === 'rating')     orderClause = `ORDER BY ${SORT_REVIEWS} DESC, sp.average_rating DESC`;
+    if (sortBy === 'experience') orderClause = 'ORDER BY sp.experience_years DESC';
 
     // ✅ REQUÊTE PRINCIPALE AVEC COMPTEUR DYNAMIQUE
    const searchQuery = `
@@ -455,17 +595,20 @@ sp.profile_image as provider_profile_image,
     sp.description,
     sp.hourly_rate,
     sp.currency,
-   (SELECT pwa.city FROM provider_working_areas pwa WHERE pwa.provider_id = sp.id LIMIT 1) as location_city,
-(SELECT pwa.neighborhood FROM provider_working_areas pwa WHERE pwa.provider_id = sp.id LIMIT 1) as location_area,
+   ${locationCitySubquery} as location_city,
+   ${locationAreaSubquery} as location_area,
     sp.experience_years,
     sp.verification_status,
     sp.is_featured,
     sp.average_rating,
     sp.profile_images,
     sp.availability,
+    sp.availability_days,
+    sp.availability_hours,
+    sp.service_details,
     sp.languages,
-    sp.certifications,        
-    sp.view_count,            
+    sp.certifications,
+    sp.view_count,
     sp.contact_count,
     sp.created_at as profile_created_at,
     sp.updated_at as profile_updated_at,
@@ -484,7 +627,7 @@ sp.profile_image as provider_profile_image,
     console.log(DEV_LOGS.DATABASE.QUERY_EXECUTED || 'QUERY', searchQuery.replace(/\s+/g, ' ').trim());
     console.log('🔍 Params de la requête:', params);
 
-    const providers = await query(searchQuery, params);
+    const providers = await query(searchQuery, [...selectParams, ...params]);
 
     console.log('🔍 DIAGNOSTIC - Premiers providers avant formatage:');
     providers.slice(0, 2).forEach(p => {
@@ -517,22 +660,41 @@ sp.profile_image as provider_profile_image,
       let certifications = null;
       let profileImages = null;
 
+      let availabilityDays = null;
+      let availabilityHours = null;
+      let serviceDetails = null;
+
       try {
         availability = provider.availability;
         if (typeof provider.availability === 'string') {
           availability = JSON.parse(provider.availability);
         }
-        
+
+        availabilityDays = provider.availability_days;
+        if (typeof provider.availability_days === 'string') {
+          availabilityDays = JSON.parse(provider.availability_days);
+        }
+
+        availabilityHours = provider.availability_hours;
+        if (typeof provider.availability_hours === 'string') {
+          availabilityHours = JSON.parse(provider.availability_hours);
+        }
+
+        serviceDetails = provider.service_details;
+        if (typeof provider.service_details === 'string') {
+          serviceDetails = JSON.parse(provider.service_details);
+        }
+
         languages = provider.languages;
         if (typeof provider.languages === 'string') {
           languages = JSON.parse(provider.languages);
         }
-        
+
         certifications = provider.certifications;
         if (typeof provider.certifications === 'string') {
           certifications = JSON.parse(provider.certifications);
         }
-        
+
         profileImages = provider.profile_images;
         if (typeof provider.profile_images === 'string') {
           profileImages = JSON.parse(provider.profile_images);
@@ -547,17 +709,21 @@ sp.profile_image as provider_profile_image,
         profileImages = null;
       }
 
+      const svcFirstName = serviceDetails?.service_first_name || provider.first_name;
+      const svcLastName = serviceDetails?.service_last_name ?? provider.last_name;
+      const svcFullName = `${svcFirstName} ${svcLastName}`.trim();
+
       return {
         // IDs
         id: provider.id,
         user_id: provider.id,
         providerId: provider.provider_id,
-        
+
         // Noms (avec tous les alias)
-        name: provider.full_name,
-        full_name: provider.full_name,
-        first_name: provider.first_name,
-        last_name: provider.last_name,
+        name: svcFullName,
+        full_name: svcFullName,
+        first_name: svcFirstName,
+        last_name: svcLastName,
         
         // Contact
         email: provider.email,
@@ -570,8 +736,8 @@ sp.profile_image as provider_profile_image,
         title: provider.title || `ספק ${getServiceLabel ? getServiceLabel(provider.service_type) : provider.service_type} מקצועי`,
         
         // Description (avec tous les alias)
-        description: provider.description || 'אין תיאור זמין',
-        bio: provider.description || 'אין תיאור זמין',
+        description: provider.description || null,
+        bio: provider.description || null,
         
         // Tarifs et expérience (avec tous les alias)
         hourlyRate: provider.hourly_rate || 0,
@@ -627,10 +793,12 @@ profileImages: profileImages || [],
         
         // Données JSON
         availability: availability,
+        availability_days: availabilityDays,
+        availability_hours: availabilityHours,
         languages: languages,
         certifications: certifications,
         specialties: null,
-        service_details: null,
+        service_details: serviceDetails,
         
         // Métadonnées
         joinedAt: provider.created_at,
