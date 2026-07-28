@@ -39,11 +39,11 @@ const responseMiddleware = (req, res, next) => {
   /**
    * Erreur générale avec code standardisé
    */
-  res.error = (code, customMessage = null, errors = null, statusCode = null) => {
+  res.error = (code, customMessage = null, errors = null, statusCode = 400) => {
     const { errorResponse, statusCode: finalStatus } = ErrorHandler.createError(
-      code, 
-      customMessage, 
-      errors, 
+      code,
+      customMessage,
+      errors,
       statusCode
     );
     return res.status(finalStatus).json(errorResponse);

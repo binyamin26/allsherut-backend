@@ -7,6 +7,7 @@ const ResponseHelper = require('../utils/responseHelper');
 const ServiceSubcategory = require('../models/ServiceSubcategory');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const User = require('../models/User');
+const emailService = require('../services/emailService');
 const { query, transaction } = require('../config/database');
 const config = require('../config/config');
 
@@ -891,15 +892,17 @@ router.post('/add', authenticateToken, async (req, res) => {
 
     const validSeekingType = ['clients', 'recruitment'].includes(seekingType) ? seekingType : 'clients';
 
+    let newProviderId;
+
     await transaction(async (connection) => {
-      // Insérer le nouveau service
+      // Insérer le nouveau service (verification_status reste 'pending' par défaut)
       const [insertResult] = await connection.execute(
         `INSERT INTO service_providers (user_id, service_type, seeking_type, is_active, created_at)
          VALUES (?, ?, ?, TRUE, NOW())`,
         [userId, serviceType, validSeekingType]
       );
 
-      const newProviderId = insertResult.insertId;
+      newProviderId = insertResult.insertId;
 
       // Si des détails de service sont fournis, les sauvegarder immédiatement
       if (serviceDetails && typeof serviceDetails === 'object' && Object.keys(serviceDetails).length > 0) {
@@ -935,6 +938,16 @@ router.post('/add', authenticateToken, async (req, res) => {
 
     // Retourner l'utilisateur mis à jour
     const updatedUser = await User.findById(userId);
+
+    // Notifier l'admin - le nouveau service reste en attente jusqu'à approbation
+    emailService.sendNewProviderNotificationEmail({
+      providerId: newProviderId,
+      name: `${updatedUser.first_name} ${updatedUser.last_name}`.trim(),
+      phone: updatedUser.phone,
+      email: updatedUser.email,
+      serviceType,
+      isAdditionalService: true
+    }).catch(err => console.error('[POST /services/add] Échec envoi email admin:', err));
 
     return res.status(201).json({
       success: true,

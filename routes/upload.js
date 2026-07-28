@@ -286,8 +286,8 @@ router.post('/gallery-image', authenticateToken, upload.single('galleryImage'), 
       gallery = Array.isArray(rawImages) ? rawImages : (() => { try { return JSON.parse(rawImages); } catch { return []; } })();
     }
 
-    if (gallery.length >= 6) {
-      return res.error(400, 'מקסימום 6 תמונות בגלריה');
+    if (gallery.length >= 15) {
+      return res.error(400, 'מקסימום 15 תמונות בגלריה');
     }
 
     // Upload vers Cloudinary dans un dossier gallery

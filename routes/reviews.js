@@ -56,9 +56,10 @@ router.post('/send-verification', reviewVerificationLimiter, async (req, res) =>
   try {
     console.log('📧 Demande code vérification avis');
     const { name, email, providerId, serviceType } = req.body;
-    
+    const trimmedName = (name || '').trim();
+
     // Validation des données
-    if (!name || !email || !providerId || !serviceType) {
+    if (!trimmedName || !email || !providerId || !serviceType) {
       return res.status(400).json({
         success: false,
         message: 'נתונים חסרים - נדרש שם, אימייל, ספק ושירות'
@@ -101,13 +102,13 @@ if (existingReview) {
         email, provider_id, service_type, verification_code, 
         reviewer_name, expires_at, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, NOW())
-    `, [email, providerId, serviceType, verificationCode, name, expiresAt]);
+    `, [email, providerId, serviceType, verificationCode, trimmedName, expiresAt]);
     
     console.log('💾 Token sauvegardé en base de données');
     
     // Envoyer l'email
     const emailResult = await emailService.sendReviewVerificationEmail(
-      email, verificationCode, name, serviceType
+      email, verificationCode, trimmedName, serviceType
     );
     
     if (emailResult.success) {
@@ -206,10 +207,13 @@ router.post('/create', async (req, res) => {
     console.log('📝 Création avis avec publication immédiate');
     console.log('📋 Données reçues:', JSON.stringify(req.body, null, 2));
     
-    const { email, verificationCode, providerId, serviceType, qualityRating, priceRating, availabilityRating, professionalismRating, title, comment, displayNameOption } = req.body;
+    const { email, name, verificationCode, providerId, serviceType, qualityRating, priceRating, availabilityRating, professionalismRating, title, comment, displayNameOption } = req.body;
 
-    // Validation des données obligatoires
-    if (!email || !verificationCode || !providerId || !serviceType || !qualityRating || !priceRating || !availabilityRating || !professionalismRating || !comment) {
+    const adminBypassEmail = (process.env.REVIEW_ADMIN_BYPASS_EMAIL || 'binou.ben26@gmail.com').toLowerCase();
+    const isAdminBypass = !!(email && email.trim().toLowerCase() === adminBypassEmail);
+
+    // Validation des données obligatoires (code requis sauf pour le compte admin)
+    if (!email || (!isAdminBypass && !verificationCode) || !providerId || !serviceType || !qualityRating || !priceRating || !availabilityRating || !professionalismRating || !comment) {
       console.log('❌ ÉCHEC: Données manquantes');
       return res.status(400).json({
         success: false,
@@ -244,6 +248,7 @@ router.post('/create', async (req, res) => {
     // NOUVEAU SYSTÈME : CRÉATION SIMPLIFIÉE avec publication immédiate
     const result = await Review.createReview({
       email,
+      name,
       verificationCode,
       providerId,
       serviceType,

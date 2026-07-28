@@ -87,7 +87,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
     if (user.role === 'provider' && updates.provider) {
       const providerUpdates = updates.provider;
       const allowedProviderUpdates = [
-        'description', 'hourly_rate', 'city', 'availability', 
+        'description', 'city', 'availability',
         'experience_years', 'skills', 'languages'
       ];
       

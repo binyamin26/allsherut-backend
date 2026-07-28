@@ -1,0 +1,2 @@
+#!/bin/sh
+flyctl ssh console --app homesherut-backend -C "node -e \"const { query } = require('/app/config/database'); (async () => { try { const rows = await query('SELECT sp.id, sp.user_id, sp.service_type, sp.title, sp.is_active, u.first_name, u.last_name, u.email FROM service_providers sp JOIN users u ON sp.user_id = u.id WHERE sp.id = ? OR sp.user_id = ?', [495, 495]); console.log(JSON.stringify(rows, null, 2)); } catch (e) { console.error(e.message); } process.exit(0); })();\""

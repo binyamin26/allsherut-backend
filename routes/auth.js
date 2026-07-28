@@ -4,6 +4,7 @@ const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const TrialHistory = require('../models/TrialHistory');
+const emailService = require('../services/emailService');
 const { authenticateToken, generateToken } = require('../middleware/authMiddleware');
 const config = require('../config/config');
 
@@ -265,6 +266,7 @@ body('phone').optional()
       };
 
       let user;
+      let notifyAdminOfNewProvider = false;
 
       // Si c'est un client OU un provider sans données Step 2 -> création simple
       if (role === 'client' || !req.body.serviceDetails) {
@@ -312,6 +314,7 @@ if (role === 'provider' && userData.tranziliaToken) {
             workingAreas,
             relativePath
           );
+          notifyAdminOfNewProvider = true;
 
           console.log(DEV_LOGS.BUSINESS.PROFILE_COMPLETED, user.id);
 
@@ -334,6 +337,16 @@ return res.status(400).json({
       
       if (user.role === 'provider') {
         responseData.providerProfile = await user.getFullProviderProfile();
+
+        if (notifyAdminOfNewProvider && responseData.providerProfile) {
+          await emailService.sendNewProviderNotificationEmail({
+            providerId: responseData.providerProfile.id,
+            name,
+            phone: userData.phone,
+            email: userData.email,
+            serviceType
+          });
+        }
     } else if (user.role === 'client') {
         responseData.contactCredits = await user.getContactCredits();
       }
@@ -506,9 +519,19 @@ router.post('/complete-provider-profile',
 
         // Réponse avec profil mis à jour
         const fullProfile = await user.getFullProviderProfile();
-        
+
+        if (fullProfile) {
+          await emailService.sendNewProviderNotificationEmail({
+            providerId: fullProfile.id,
+            name: `${user.first_name} ${user.last_name}`.trim(),
+            phone: user.phone,
+            email: user.email,
+            serviceType: user.service_type
+          });
+        }
+
         console.log(DEV_LOGS.BUSINESS.PROFILE_COMPLETED, user.id);
-        
+
         res.success(MESSAGES.SUCCESS.PROVIDER.PROFILE_COMPLETED, {
           user: user.toJSON(),
           providerProfile: fullProfile
@@ -764,6 +787,70 @@ router.post('/reset-password', resetPasswordLimiter, [
 
   } catch (error) {
     console.error(DEV_LOGS.API.ERROR_OCCURRED, 'Password reset:', error);
+    res.serverError(error);
+  }
+});
+
+// =============================================
+// POST /api/auth/verify-provider/:token
+// Approbation / refus d'un prestataire via le lien envoyé par email à l'admin
+// =============================================
+router.post('/verify-provider/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, config.jwt.secret);
+    } catch (err) {
+      return res.error(ErrorHandler.CODES.TOKEN_INVALID);
+    }
+
+    if (decoded.type !== 'provider_verification' || !['approve', 'reject'].includes(decoded.action)) {
+      return res.error(ErrorHandler.CODES.TOKEN_INVALID);
+    }
+
+    const rows = await query(
+      `SELECT sp.id, sp.verification_status, sp.service_type, u.first_name, u.last_name
+       FROM service_providers sp
+       JOIN users u ON u.id = sp.user_id
+       WHERE sp.id = ?`,
+      [decoded.providerId]
+    );
+
+    if (rows.length === 0) {
+      return res.error(ErrorHandler.CODES.PROVIDER_NOT_FOUND);
+    }
+
+    const provider = rows[0];
+    const providerName = `${provider.first_name} ${provider.last_name}`.trim();
+
+    if (provider.verification_status !== 'pending') {
+      return res.success('הפרופיל כבר טופל בעבר', {
+        alreadyProcessed: true,
+        status: provider.verification_status,
+        providerName,
+        serviceType: provider.service_type
+      });
+    }
+
+    const newStatus = decoded.action === 'approve' ? 'verified' : 'rejected';
+
+    await query(
+      'UPDATE service_providers SET verification_status = ? WHERE id = ?',
+      [newStatus, provider.id]
+    );
+
+    return res.success('הסטטוס עודכן בהצלחה', {
+      alreadyProcessed: false,
+      action: decoded.action,
+      status: newStatus,
+      providerName,
+      serviceType: provider.service_type
+    });
+
+  } catch (error) {
+    console.error(DEV_LOGS.API.ERROR_OCCURRED, 'Provider verification:', error);
     res.serverError(error);
   }
 });
@@ -1212,8 +1299,7 @@ router.put('/update-full-profile',
     body('lastName').optional({ checkFalsy: true }).trim().isLength({ min: 2 }).withMessage('שם משפחה נדרש'),
     body('email').optional().isEmail().toLowerCase().withMessage(MESSAGES.ERROR.VALIDATION.INVALID_EMAIL),
     body('phone').optional(),
-body('experienceYears').optional({ nullable: true, checkFalsy: true }).isInt({ min: 0 }).withMessage('ניסיון חייב להיות מספר חיובי'),
-body('hourlyRate').optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0 }).withMessage('תעריף חייב להיות מספר חיובי')
+body('experienceYears').optional({ nullable: true, checkFalsy: true }).isInt({ min: 0 }).withMessage('ניסיון חייב להיות מספר חיובי')
   ],
   async (req, res) => {
     try {
@@ -1257,7 +1343,6 @@ body('hourlyRate').optional({ nullable: true, checkFalsy: true }).isFloat({ min:
         phone: req.body.phone,
         description: req.body.description,
         experienceYears: req.body.experienceYears,
-        hourlyRate: req.body.hourlyRate,
         availability: req.body.availability,
         languages: req.body.languages,
         workingAreas: req.body.workingAreas,

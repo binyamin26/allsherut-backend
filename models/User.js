@@ -632,7 +632,8 @@ try {
   'babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'sports_activities', 'eldercare',
   'laundry', 'property_management', 'electrician', 'plumbing', 'air_conditioning',
   'gas_technician', 'drywall', 'carpentry', 'home_organization', 'event_entertainment',
-  'dj', 'private_chef', 'painting', 'waterproofing', 'contractor', 'aluminum',
+  'event_equipment_rental', 'event_food_stands',
+  'dj', 'private_chef', 'catering', 'pastry', 'painting', 'waterproofing', 'contractor', 'aluminum',
   'glass_works', 'locksmith', 'moving', 'photographer', 'event_decoration', 'pest_control',
   'handyman', 'mechanic', 'metalwork', 'driver'
 ];
@@ -858,7 +859,6 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
     const baseFields = {
       description: details.description || null,
       experience_years: details.experience || details.experienceYears || 0,
-      hourly_rate: details.hourlyRate || details.rate || 0,
     };
 
     // profile_image : seulement si une image est fournie (colonne optionnelle en prod)
@@ -1290,6 +1290,7 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       }
       break;
       case 'private_chef':
+      case 'catering':
       if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
         errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
       }
@@ -1301,6 +1302,15 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
       }
       if (serviceDetails.work_types?.includes('כשרות') && (!serviceDetails.kosher_types || serviceDetails.kosher_types.length === 0)) {
         errors.push({ field: 'kosher_types', message: 'יש לבחור לפחות סוג כשרות אחד' });
+      }
+      break;
+
+      case 'pastry':
+      if (!serviceDetails.availability_hours || serviceDetails.availability_hours.length === 0) {
+        errors.push({ field: 'availability_hours', message: 'יש לבחור שעות זמינות' });
+      }
+      if (!serviceDetails.product_types || serviceDetails.product_types.length === 0) {
+        errors.push({ field: 'product_types', message: 'יש לבחור לפחות סוג מוצר אחד' });
       }
       break;
 
@@ -1549,11 +1559,6 @@ if (this.role === 'provider') {
           providerUpdateValues.push(parseInt(profileData.experienceYears) || 0);
         }
 
-        if (profileData.hourlyRate !== undefined) {
-          providerUpdateFields.push('hourly_rate = ?');
-          providerUpdateValues.push(parseFloat(profileData.hourlyRate) || 0);
-        }
-
         if (profileData.availability !== undefined) {
           providerUpdateFields.push('availability = ?');
           providerUpdateValues.push(JSON.stringify(profileData.availability || []));
@@ -1588,13 +1593,15 @@ const updatedDetails = {
   ...(profileData.serviceDetails || {}),
   // ✅ Synchroniser les colonnes avec le JSON
   experience_years: profileData.experienceYears !== undefined ? parseInt(profileData.experienceYears) || 0 : currentDetails.experience_years,
-  hourly_rate: profileData.hourlyRate !== undefined ? parseFloat(profileData.hourlyRate).toFixed(2) : currentDetails.hourly_rate,
-  hourlyRate: profileData.hourlyRate !== undefined ? profileData.hourlyRate.toString() : currentDetails.hourlyRate,
   description: profileData.description !== undefined ? profileData.description : currentDetails.description,
   // Nom par service : stocké ici pour éviter d'écraser le nom des autres services
   ...(profileData.firstName !== undefined ? { service_first_name: profileData.firstName } : {}),
   ...(profileData.lastName !== undefined ? { service_last_name: profileData.lastName || '' } : {})
 };
+// Champ de tarif horaire retiré : ne plus le reconduire dans le JSON
+delete updatedDetails.hourly_rate;
+delete updatedDetails.hourlyRate;
+delete updatedDetails.rate;
 
 providerUpdateFields.push('service_details = ?');
 providerUpdateValues.push(JSON.stringify(updatedDetails));

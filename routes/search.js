@@ -381,8 +381,6 @@ router.get('/providers', async (req, res) => {
       city,
       neighborhood,
       area,
-      minPrice,
-      maxPrice,
       sortBy = 'newest',
       page = 1,
       limit = 10,
@@ -404,7 +402,7 @@ router.get('/providers', async (req, res) => {
 
     // Validation du service si fourni
     if (service) {
-const validServices = ['babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'sports_activities', 'eldercare', 'laundry', 'property_management', 'electrician', 'plumbing','air_conditioning', 'gas_technician','drywall', 'carpentry', 'home_organization', 'event_entertainment', 'dj', 'private_chef', 'painting', 'waterproofing', 'contractor','aluminum','glass_works', 'locksmith', 'moving', 'photographer', 'event_decoration', 'pest_control', 'handyman', 'mechanic', 'metalwork', 'driver'];
+const validServices = ['babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'sports_activities', 'eldercare', 'laundry', 'property_management', 'electrician', 'plumbing','air_conditioning', 'gas_technician','drywall', 'carpentry', 'home_organization', 'event_entertainment', 'event_equipment_rental', 'event_food_stands', 'dj', 'private_chef', 'catering', 'pastry', 'painting', 'waterproofing', 'contractor','aluminum','glass_works', 'locksmith', 'moving', 'photographer', 'event_decoration', 'pest_control', 'handyman', 'mechanic', 'metalwork', 'driver'];
       if (!validServices.includes(service)) {
         const { errorResponse, statusCode } = ErrorHandler.validationError([{
           field: 'service',
@@ -420,7 +418,7 @@ const validServices = ['babysitting', 'cleaning', 'gardening', 'petcare', 'tutor
     const offset = (pageNum - 1) * limitNum;
 
     // Construction de la requête WHERE - CONDITIONS DE BASE
-    let whereConditions = [`u.role = 'provider'`, `u.is_active = 1`, `sp.is_active = 1`];
+    let whereConditions = [`u.role = 'provider'`, `u.is_active = 1`, `sp.is_active = 1`, `sp.verification_status = 'verified'`];
     const params = [];
 
     // Application des filtres BASIQUES
@@ -459,16 +457,6 @@ const validServices = ['babysitting', 'cleaning', 'gardening', 'petcare', 'tutor
   whereConditions.push(`EXISTS (SELECT 1 FROM provider_working_areas pwa WHERE pwa.provider_id = sp.id AND pwa.neighborhood LIKE ?)`);
   params.push(`%${neighborhood}%`);
 }
-
-    if (minPrice && !isNaN(parseFloat(minPrice))) {
-      whereConditions.push(`sp.hourly_rate >= ?`);
-      params.push(parseFloat(minPrice));
-    }
-
-    if (maxPrice && !isNaN(parseFloat(maxPrice))) {
-      whereConditions.push(`sp.hourly_rate <= ?`);
-      params.push(parseFloat(maxPrice));
-    }
 
     // Filtres GÉNÉRIQUES
     if (experience) {
@@ -571,8 +559,6 @@ delete advancedFilters.fullLocation;
     let orderClause = `ORDER BY ${SORT_REVIEWS} DESC, sp.average_rating DESC, sp.is_featured DESC, u.created_at DESC`;
 
     if (sortBy === 'oldest')     orderClause = 'ORDER BY u.created_at ASC';
-    if (sortBy === 'price_asc')  orderClause = 'ORDER BY sp.hourly_rate ASC';
-    if (sortBy === 'price_desc') orderClause = 'ORDER BY sp.hourly_rate DESC';
     if (sortBy === 'rating')     orderClause = `ORDER BY ${SORT_REVIEWS} DESC, sp.average_rating DESC`;
     if (sortBy === 'experience') orderClause = 'ORDER BY sp.experience_years DESC';
 
@@ -585,7 +571,7 @@ delete advancedFilters.fullLocation;
     CONCAT(u.first_name, ' ', u.last_name) as full_name,
     u.email,
     u.phone,
-    u.service_type,
+    sp.service_type,
     u.premium_until,
     u.profile_image,
 u.created_at,
@@ -823,8 +809,6 @@ profileImages: profileImages || [],
         service,
         city,
         neighborhood,
-        minPrice: minPrice ? parseFloat(minPrice) : null,
-        maxPrice: maxPrice ? parseFloat(maxPrice) : null,
         sortBy,
         experience,
         verified: verified === 'true',

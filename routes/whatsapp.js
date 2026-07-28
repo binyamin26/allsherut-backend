@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const emailService = require('../services/emailService');
+const { query } = require('../config/database');
+const { getServiceLabel } = require('../constants/messages');
 
 const TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -67,7 +69,7 @@ router.post('/notify', async (req, res) => {
 // Sends a delayed WA to the CLIENT asking if they concluded a deal with the provider
 router.post('/followup', async (req, res) => {
   try {
-    const { clientPhone, clientName, providerName, serviceName, action, delayMinutes = 1 } = req.body;
+    const { clientPhone, clientName, providerName, serviceName, action, providerPhone, delayMinutes = 1 } = req.body;
 
     if (!clientPhone) {
       return res.status(400).json({ success: false, message: 'clientPhone required' });
@@ -78,9 +80,26 @@ router.post('/followup', async (req, res) => {
 
     res.json({ success: true, scheduledIn: `${delayMinutes}min` });
 
-    emailService
-      .sendLeadNotificationEmail({ clientPhone, providerName, serviceName, action })
-      .catch(err => console.error('Lead email error:', err.message));
+    (async () => {
+      let resolvedServiceName = serviceName;
+      if (!resolvedServiceName && providerPhone) {
+        try {
+          const rows = await query(
+            `SELECT sp.service_type FROM service_providers sp
+             JOIN users u ON sp.user_id = u.id
+             WHERE u.phone = ? ORDER BY sp.is_active DESC LIMIT 1`,
+            [providerPhone]
+          );
+          if (rows[0]?.service_type) {
+            resolvedServiceName = getServiceLabel(rows[0].service_type);
+          }
+        } catch (err) {
+          console.error('Lead email service lookup error:', err.message);
+        }
+      }
+
+      return emailService.sendLeadNotificationEmail({ clientPhone, providerName, serviceName: resolvedServiceName, action });
+    })().catch(err => console.error('Lead email error:', err.message));
 
     setTimeout(async () => {
       try {

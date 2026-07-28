@@ -453,6 +453,7 @@ router.get('/:id', async (req, res) => {
   WHERE (sp.user_id = ? OR sp.id = ?)
     AND sp.is_active = TRUE
     AND u.is_active = TRUE
+    AND sp.verification_status = 'verified'
 
   GROUP BY sp.id, u.id
   ORDER BY (sp.id = ?) DESC
@@ -628,7 +629,7 @@ serviceDetails: {
  */
 function calculateProfileCompleteness(providerData, details, workingAreas) {
   const requiredFields = [
-    'title', 'description', 'hourly_rate', 'location_city', 'experience_years'
+    'title', 'description', 'location_city', 'experience_years'
   ];
   
   const optionalFields = [

@@ -40,6 +40,10 @@ class Review {
    * Envoyer un code de vérification par email
    */
   static async sendVerificationCode(name, email, providerId, serviceType) {
+    const trimmedName = (name || '').trim();
+    if (!trimmedName) {
+      throw new Error('שם נדרש לשליחת קוד אימות');
+    }
     return transaction(async (connection) => {
       try {
         const verificationCode = Review.generateVerificationCode();
@@ -47,17 +51,17 @@ class Review {
 
         // Supprimer les anciens tokens pour cette combinaison email/provider
         await connection.execute(`
-          DELETE FROM review_email_tokens 
+          DELETE FROM review_email_tokens
           WHERE email = ? AND provider_id = ?
         `, [email, providerId]);
 
         // Insérer le nouveau token
         await connection.execute(`
           INSERT INTO review_email_tokens (
-            email, provider_id, service_type, verification_code, 
+            email, provider_id, service_type, verification_code,
             reviewer_name, expires_at, created_at
           ) VALUES (?, ?, ?, ?, ?, ?, NOW())
-        `, [email, providerId, serviceType, verificationCode, name, expiresAt]);
+        `, [email, providerId, serviceType, verificationCode, trimmedName, expiresAt]);
 
         // Envoyer l'email de vérification
         const emailResult = await emailService.sendReviewVerificationEmail(
@@ -176,10 +180,13 @@ class Review {
   return transaction(async (connection) => {
     try {
       const {
-        email, verificationCode, providerId, serviceType,
+        email, name, verificationCode, providerId, serviceType,
         qualityRating, priceRating, availabilityRating, professionalismRating,
         rating, title, comment, displayNameOption = 'private'
       } = reviewData;
+
+      const adminBypassEmail = (process.env.REVIEW_ADMIN_BYPASS_EMAIL || 'binou.ben26@gmail.com').toLowerCase();
+      const isAdminBypass = !!(email && email.trim().toLowerCase() === adminBypassEmail);
 
 // Résolution : priorité à sp.id direct, sinon fallback sur user_id
 let actualProviderId = providerId;
@@ -202,21 +209,38 @@ if (directMatch.length > 0) {
 }
 console.log(`🔄 Provider ID résolu: ${providerId} → ${actualProviderId}`);
 
-// Vérifier que le token existe et a été utilisé récemment
-const tokens = await connection.execute(`
-  SELECT reviewer_name FROM review_email_tokens 
-  WHERE email = ? AND provider_id = ? AND service_type = ? AND verification_code = ?
-  AND used_at IS NOT NULL AND used_at > DATE_SUB(NOW(), INTERVAL 30 MINUTE)
-`, [email, providerId, serviceType, verificationCode]);
+// Compte admin : publication directe sans vérification email/code
+let fullName;
+if (isAdminBypass) {
+  console.log('🔓 Avis admin - vérification email ignorée');
+  fullName = (name && name.trim()) || 'AllSherut';
+} else {
+  // Vérifier que le token existe et a été utilisé récemment
+  const tokens = await connection.execute(`
+    SELECT reviewer_name FROM review_email_tokens
+    WHERE email = ? AND provider_id = ? AND service_type = ? AND verification_code = ?
+    AND used_at IS NOT NULL AND used_at > DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+  `, [email, providerId, serviceType, verificationCode]);
 
-if (tokens[0].length === 0) {
-  return { 
-    success: false, 
-    message: 'אימות נכשל - קוד לא תקין או פג תוקף' 
-  };
+  if (tokens[0].length === 0) {
+    return {
+      success: false,
+      message: 'אימות נכשל - קוד לא תקין או פג תוקף'
+    };
+  }
+
+  const tokenName = (tokens[0][0].reviewer_name || '').trim();
+  if (!tokenName) {
+    // Ne jamais publier un avis sous "לקוח אנונימי" en silence quand le nom
+    // attendu est manquant -- forcer l'utilisateur à recommencer plutôt que
+    // de lui afficher un nom qu'il n'a pas choisi.
+    return {
+      success: false,
+      message: 'לא נמצא שם תקין לאימות זה - אנא בקש קוד אימות חדש'
+    };
+  }
+  fullName = tokenName;
 }
-
-const fullName = tokens[0][0].reviewer_name || 'לקוח אנונימי';
 
 console.log('🔍 Nom complet récupéré:', fullName);
 console.log('🔍 Option d\'affichage:', displayNameOption);
@@ -276,11 +300,13 @@ if (avgResult.length > 0) {
 }
 // JUSQU'ICI ↑
 
-// Nettoyer le token
-await connection.execute(`
-  DELETE FROM review_email_tokens 
-  WHERE email = ? AND provider_id = ? AND verification_code = ?
-`, [email, providerId, verificationCode]);
+// Nettoyer le token (aucun token créé pour le bypass admin)
+if (!isAdminBypass) {
+  await connection.execute(`
+    DELETE FROM review_email_tokens
+    WHERE email = ? AND provider_id = ? AND verification_code = ?
+  `, [email, providerId, verificationCode]);
+}
 
         // NOUVEAU : Notification au prestataire pour tous les avis
         await Review.notifyProviderNewReview(actualProviderId, {

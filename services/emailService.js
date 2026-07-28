@@ -1,5 +1,7 @@
 const { Resend } = require('resend');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const config = require('../config/config');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = 'AllSherut <contact@allsherut.com>';
@@ -93,7 +95,7 @@ getEmailHeader(subtitle = '') {
       'laundry': 'כביסה', 'property-management': 'ניהול דירות', 'propertymanagement': 'ניהול דירות', 'electrician': 'חשמלאי',
       'plumbing': 'אינסטלציה', 'air-conditioning': 'מיזוג אוויר', 'airconditioning': 'מיזוג אוויר', 'gas-technician': 'טכנאי גז', 'gastechnician': 'טכנאי גז',
       'drywall': 'גבס', 'carpentry': 'נגרות', 'home-organization': 'סידור בית', 'homeorganization': 'סידור בית',
-      'event-entertainment': 'אירועים', 'evententertainment': 'אירועים', 'private-chef': 'שף פרטי', 'privatechef': 'שף פרטי', 'painting': 'צביעה',
+      'event-entertainment': 'אירועים', 'evententertainment': 'אירועים', 'private-chef': 'שף פרטי', 'privatechef': 'שף פרטי', 'catering': 'קייטרינג', 'pastry': 'פירות ופטיסרי', 'painting': 'צביעה',
       'waterproofing': 'איטום', 'contractor': 'קבלן', 'aluminum': 'אלומיניום',
       'glass-works': 'זגגות', 'glassworks': 'זגגות', 'locksmith': 'מנעולן'
     };
@@ -143,7 +145,7 @@ getEmailHeader(subtitle = '') {
       'laundry': 'כביסה', 'property-management': 'ניהול דירות', 'propertymanagement': 'ניהול דירות', 'electrician': 'חשמלאי',
       'plumbing': 'אינסטלציה', 'air-conditioning': 'מיזוג אוויר', 'airconditioning': 'מיזוג אוויר', 'gas-technician': 'טכנאי גז', 'gastechnician': 'טכנאי גז',
       'drywall': 'גבס', 'carpentry': 'נגרות', 'home-organization': 'סידור בית', 'homeorganization': 'סידור בית',
-      'event-entertainment': 'אירועים', 'evententertainment': 'אירועים', 'private-chef': 'שף פרטי', 'privatechef': 'שף פרטי', 'painting': 'צביעה',
+      'event-entertainment': 'אירועים', 'evententertainment': 'אירועים', 'private-chef': 'שף פרטי', 'privatechef': 'שף פרטי', 'catering': 'קייטרינג', 'pastry': 'פירות ופטיסרי', 'painting': 'צביעה',
       'waterproofing': 'איטום', 'contractor': 'קבלן', 'aluminum': 'אלומיניום',
       'glass-works': 'זגגות', 'glassworks': 'זגגות', 'locksmith': 'מנעולן'
     };
@@ -186,7 +188,7 @@ getEmailHeader(subtitle = '') {
       'laundry': 'כביסה', 'property-management': 'ניהול דירות', 'propertymanagement': 'ניהול דירות', 'electrician': 'חשמלאי',
       'plumbing': 'אינסטלציה', 'air-conditioning': 'מיזוג אוויר', 'airconditioning': 'מיזוג אוויר', 'gas-technician': 'טכנאי גז', 'gastechnician': 'טכנאי גז',
       'drywall': 'גבס', 'carpentry': 'נגרות', 'home-organization': 'סידור בית', 'homeorganization': 'סידור בית',
-      'event-entertainment': 'אירועים', 'evententertainment': 'אירועים', 'private-chef': 'שף פרטי', 'privatechef': 'שף פרטי', 'painting': 'צביעה',
+      'event-entertainment': 'אירועים', 'evententertainment': 'אירועים', 'private-chef': 'שף פרטי', 'privatechef': 'שף פרטי', 'catering': 'קייטרינג', 'pastry': 'פירות ופטיסרי', 'painting': 'צביעה',
       'waterproofing': 'איטום', 'contractor': 'קבלן', 'aluminum': 'אלומיניום',
       'glass-works': 'זגגות', 'glassworks': 'זגגות', 'locksmith': 'מנעולן'
     };
@@ -494,6 +496,40 @@ getEmailHeader(subtitle = '') {
   }
 
   // ============================================
+  // TEMPLATE: New Provider Registration (admin approval)
+  // ============================================
+  getNewProviderNotificationTemplate({ name, phone, email, serviceType, approveUrl, rejectUrl, isAdditionalService }) {
+    const timestamp = new Date().toLocaleString('he-IL', {
+      timeZone: 'Asia/Jerusalem', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+
+    return `
+      ${this.getEmailHeader(isAdditionalService ? '🆕 ספק קיים הוסיף תחום שירות - נדרש אישור' : '🆕 ספק חדש נרשם - נדרש אישור')}
+          <div style="padding: 40px; direction: rtl;">
+            <div style="background: #fffbeb; border-right: 3px solid #f59e0b; color: #92400e; padding: 12px 18px; border-radius: 10px; margin-bottom: 25px; font-size: 14px; font-weight: 600;">
+              📅 ${isAdditionalService ? 'תחום נוסף ב' : 'נרשם ב'}: ${timestamp}
+            </div>
+            ${isAdditionalService ? `<div style="background: #eff6ff; border-right: 3px solid #2563eb; color: #1e3a8a; padding: 12px 18px; border-radius: 10px; margin-bottom: 25px; font-size: 14px; font-weight: 600;">ℹ️ ספק קיים ומאושר הוסיף תחום שירות נוסף. התחום החדש דורש אישור נפרד לפני שיוצג באתר.</div>` : ''}
+
+            ${this._contactField('שם', name)}
+            ${this._contactField('טלפון', `<a href="tel:${phone}" style="color: #2F80ED; text-decoration: none; font-weight: 700;">${phone}</a>`)}
+            ${this._contactField('אימייל', `<a href="mailto:${email}" style="color: #1A5490; text-decoration: none;">${email}</a>`)}
+            ${this._contactField('תחום', serviceType)}
+
+            <div style="text-align: center; margin: 35px 0 10px;">
+              <a href="${approveUrl}" style="display: inline-block; background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); color: white; padding: 14px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; margin: 0 8px; box-shadow: 0 4px 15px rgba(34,197,94,0.3);">
+                ✅ אשר פרופיל
+              </a>
+              <a href="${rejectUrl}" style="display: inline-block; background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: white; padding: 14px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; margin: 0 8px; box-shadow: 0 4px 15px rgba(239,68,68,0.3);">
+                ❌ דחה פרופיל
+              </a>
+            </div>
+          </div>
+      ${this.getEmailFooter()}
+    `;
+  }
+
+  // ============================================
   // MÉTHODES D'ENVOI
   // ============================================
 
@@ -578,6 +614,26 @@ getEmailHeader(subtitle = '') {
       adminEmail,
       `📞 ליד חדש${providerName ? ` - ${providerName}` : ''}`,
       this.getLeadNotificationTemplate({ clientPhone, providerName, serviceName, action })
+    );
+  }
+
+  async sendNewProviderNotificationEmail({ providerId, name, phone, email, serviceType, isAdditionalService }) {
+    const adminEmail = process.env.ADMIN_EMAIL || 'allsherutcontact@gmail.com';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    const makeToken = (action) => jwt.sign(
+      { providerId, action, type: 'provider_verification' },
+      config.jwt.secret,
+      { expiresIn: '30d' }
+    );
+
+    const approveUrl = `${frontendUrl}/admin/verify-provider/${makeToken('approve')}`;
+    const rejectUrl = `${frontendUrl}/admin/verify-provider/${makeToken('reject')}`;
+
+    return this._sendMail(
+      adminEmail,
+      isAdditionalService ? `🆕 ספק קיים הוסיף תחום - ${name}` : `🆕 ספק חדש נרשם - ${name}`,
+      this.getNewProviderNotificationTemplate({ name, phone, email, serviceType, approveUrl, rejectUrl, isAdditionalService })
     );
   }
 
