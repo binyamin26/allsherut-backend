@@ -12,6 +12,7 @@ const migrations = [
   'fix_service_type_varchar.sql',
   'fix_average_rating_decimal.sql',
   'add_provider_pricing.sql',
+  'add_pricing_is_title.sql',
 ];
 
 async function run() {

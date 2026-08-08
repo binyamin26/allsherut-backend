@@ -375,6 +375,63 @@ router.get('/:id/reviews', async (req, res) => {
 });
 
 /**
+ * GET /api/providers/:id/review-info
+ * Infos minimales publiques pour la page de demande d'avis (/review/:id).
+ * Contrairement à GET /:id, ceci reste accessible même si le profil n'est
+ * pas encore vérifié/publié - seul un compte réellement désactivé (is_active
+ * = FALSE côté service ou côté utilisateur) renvoie 404. Ça permet à un
+ * prestataire de collecter des avis avant que son profil soit visible.
+ * @access Public
+ */
+router.get('/:id/review-info', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const providerId = validateProviderId(id);
+    if (!providerId) {
+      const { errorResponse, statusCode } = ErrorHandler.validationError([{
+        field: 'id',
+        message: MESSAGES.ERROR.VALIDATION.INVALID_ID
+      }]);
+      return res.status(statusCode).json(errorResponse);
+    }
+
+    const result = await query(`
+      SELECT
+        sp.id,
+        sp.service_type,
+        sp.location_city,
+        COALESCE(NULLIF(sp.title, ''), CONCAT(u.first_name, ' ', u.last_name)) as display_name
+      FROM service_providers sp
+      JOIN users u ON sp.user_id = u.id
+      WHERE (sp.user_id = ? OR sp.id = ?)
+        AND sp.is_active = TRUE
+        AND u.is_active = TRUE
+      ORDER BY (sp.id = ?) DESC
+      LIMIT 1
+    `, [providerId, providerId, providerId]);
+
+    if (result.length === 0) {
+      const { errorResponse, statusCode } = ErrorHandler.notFoundError('provider');
+      return res.status(statusCode).json(errorResponse);
+    }
+
+    const provider = result[0];
+    res.success('פרטי ספק נטענו', {
+      id: provider.id,
+      displayName: provider.display_name,
+      serviceType: provider.service_type,
+      locationCity: provider.location_city
+    });
+
+  } catch (error) {
+    console.error(DEV_LOGS.DATABASE.QUERY_ERROR, 'Provider review-info fetch failed:', error.message);
+    const { errorResponse, statusCode } = ErrorHandler.serverError(error);
+    res.status(statusCode).json(errorResponse);
+  }
+});
+
+/**
  * GET /api/providers/:id
  * Récupération complète des données d'un provider
  * @desc Profil complet du provider avec toutes ses informations

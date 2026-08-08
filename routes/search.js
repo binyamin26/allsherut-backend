@@ -245,6 +245,39 @@ case 'hanging_types': {
   break;
 }
 
+case 'service_type': {
+  const arr = value.split(',').map(v => v.trim());
+  if (arr.length > 0) {
+    const placeholders = arr.map(() => '?').join(',');
+    conditions.push(`sp.service_details->>'$.service_type' IN (${placeholders})`);
+    params.push(...arr);
+    console.log(`[buildAdvancedFilters] Condition service_type ajoutée:`, arr);
+  }
+  break;
+}
+
+case 'transportation_type': {
+  const arr = value.split(',').map(v => v.trim());
+  if (arr.length > 0) {
+    const placeholders = arr.map(() => '?').join(',');
+    conditions.push(`JSON_OVERLAPS(sp.service_details->'$.transportation_type', JSON_ARRAY(${placeholders}))`);
+    params.push(...arr);
+    console.log(`[buildAdvancedFilters] Condition transportation_type ajoutée:`, arr);
+  }
+  break;
+}
+
+case 'vehicle_type': {
+  const arr = value.split(',').map(v => v.trim());
+  if (arr.length > 0) {
+    const placeholders = arr.map(() => '?').join(',');
+    conditions.push(`JSON_OVERLAPS(sp.service_details->'$.vehicle_type', JSON_ARRAY(${placeholders}))`);
+    params.push(...arr);
+    console.log(`[buildAdvancedFilters] Condition vehicle_type ajoutée:`, arr);
+  }
+  break;
+}
+
 case 'minAge':
   if (!isNaN(parseInt(value))) {
     conditions.push(`sp.service_details->>'$.age' >= ?`);

@@ -15,11 +15,11 @@ router.get('/provider/:providerId', async (req, res) => {
     }
 
     const rows = await query(
-      'SELECT id, service_name, price, sort_order FROM provider_pricing WHERE provider_id = ? ORDER BY sort_order ASC, id ASC',
+      'SELECT id, service_name, price, is_title, sort_order FROM provider_pricing WHERE provider_id = ? ORDER BY sort_order ASC, id ASC',
       [providerId]
     );
 
-    return res.json({ success: true, data: rows });
+    return res.json({ success: true, data: rows.map(r => ({ ...r, is_title: !!r.is_title })) });
   } catch (err) {
     console.error('GET /pricing/provider/:providerId error:', err);
     return res.status(500).json({ success: false, message: 'שגיאה בטעינת המחירון' });
@@ -45,11 +45,11 @@ router.get('/my', authenticateToken, async (req, res) => {
 
     const providerId = providers[0].id;
     const rows = await query(
-      'SELECT id, service_name, price, sort_order FROM provider_pricing WHERE provider_id = ? ORDER BY sort_order ASC, id ASC',
+      'SELECT id, service_name, price, is_title, sort_order FROM provider_pricing WHERE provider_id = ? ORDER BY sort_order ASC, id ASC',
       [providerId]
     );
 
-    return res.json({ success: true, data: rows });
+    return res.json({ success: true, data: rows.map(r => ({ ...r, is_title: !!r.is_title })) });
   } catch (err) {
     console.error('GET /pricing/my error:', err);
     return res.status(500).json({ success: false, message: 'שגיאה בטעינת המחירון' });
@@ -71,17 +71,20 @@ router.put('/my', authenticateToken, async (req, res) => {
 
     // Validation
     for (const item of items) {
+      const isTitle = !!item.is_title;
       if (!item.service_name || !item.service_name.trim()) {
-        return res.status(400).json({ success: false, message: 'Nom de service requis pour chaque ligne' });
-      }
-      if (!item.price || !item.price.trim()) {
-        return res.status(400).json({ success: false, message: 'Tarif requis pour chaque ligne' });
+        return res.status(400).json({ success: false, message: isTitle ? 'כותרת חובה עבור כל שורת כותרת' : 'Nom de service requis pour chaque ligne' });
       }
       if (item.service_name.trim().length > 200) {
         return res.status(400).json({ success: false, message: 'Nom de service trop long (max 200 caractères)' });
       }
-      if (item.price.trim().length > 100) {
-        return res.status(400).json({ success: false, message: 'Tarif trop long (max 100 caractères)' });
+      if (!isTitle) {
+        if (!item.price || !item.price.trim()) {
+          return res.status(400).json({ success: false, message: 'Tarif requis pour chaque ligne' });
+        }
+        if (item.price.trim().length > 100) {
+          return res.status(400).json({ success: false, message: 'Tarif trop long (max 100 caractères)' });
+        }
       }
     }
 
@@ -104,21 +107,22 @@ router.put('/my', authenticateToken, async (req, res) => {
       const values = items.map((item, index) => [
         providerId,
         item.service_name.trim(),
-        item.price.trim(),
+        item.is_title ? '' : item.price.trim(),
+        !!item.is_title,
         index
       ]);
       await query(
-        'INSERT INTO provider_pricing (provider_id, service_name, price, sort_order) VALUES ?',
+        'INSERT INTO provider_pricing (provider_id, service_name, price, is_title, sort_order) VALUES ?',
         [values]
       );
     }
 
     const saved = await query(
-      'SELECT id, service_name, price, sort_order FROM provider_pricing WHERE provider_id = ? ORDER BY sort_order ASC, id ASC',
+      'SELECT id, service_name, price, is_title, sort_order FROM provider_pricing WHERE provider_id = ? ORDER BY sort_order ASC, id ASC',
       [providerId]
     );
 
-    return res.json({ success: true, message: 'המחירון נשמר בהצלחה', data: saved });
+    return res.json({ success: true, message: 'המחירון נשמר בהצלחה', data: saved.map(r => ({ ...r, is_title: !!r.is_title })) });
   } catch (err) {
     console.error('PUT /pricing/my error:', err);
     return res.status(500).json({ success: false, message: 'שגיאה בשמירת המחירון' });

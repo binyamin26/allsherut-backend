@@ -85,8 +85,8 @@ app.get('/', (req, res) => {
   res.json({ success: true, message: '🚀 Backend HomeSherut is running!' });
 });
 
-// Sitemap dynamique
-app.get('/sitemap.xml', require('./routes/sitemap'));
+// Sitemap dynamique (fiches prestataires uniquement — voir public/sitemap.xml pour les pages statiques)
+app.use('/sitemap-providers.xml', require('./routes/sitemap'));
 
 // 2. Route de santé (Health)
 app.use('/api/health', require('./routes/health'));

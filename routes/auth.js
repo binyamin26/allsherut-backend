@@ -102,6 +102,15 @@ const uploadToCloudinary = (fileBuffer, userId, serviceType) => {
   });
 };
 
+// Accepte une URL déjà uploadée par le navigateur en direct vers Cloudinary
+// (upload signé côté client — voir /api/upload/cloudinary-signature), utilisée
+// quand l'upload multipart classique vers notre backend est bloqué côté client
+// (filtre réseau/antivirus interceptant les requêtes multipart vers fly.dev).
+const isTrustedCloudinaryUrl = (url) => {
+  if (typeof url !== 'string' || !process.env.CLOUDINARY_CLOUD_NAME) return false;
+  return url.startsWith(`https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/`);
+};
+
 const storage = multer.memoryStorage();
 
 const upload = multer({
@@ -282,6 +291,9 @@ if (role === 'provider' && userData.tranziliaToken) {
           const cloudinaryResult = await uploadToCloudinary(req.file.buffer, user.id, serviceType);
           await user.updateProfile({ profile_image_path: cloudinaryResult.secure_url });
           console.log('☁️ Image Cloudinary:', cloudinaryResult.secure_url);
+        } else if (isTrustedCloudinaryUrl(req.body.profileImageUrl)) {
+          await user.updateProfile({ profile_image_path: req.body.profileImageUrl });
+          console.log('☁️ Image Cloudinary (upload direct):', req.body.profileImageUrl);
         }
 
         console.log(DEV_LOGS.BUSINESS.PROVIDER_CREATED, user.id);
@@ -306,6 +318,9 @@ if (role === 'provider' && userData.tranziliaToken) {
             const cloudinaryResult = await uploadToCloudinary(req.file.buffer, 'new', serviceType);
             relativePath = cloudinaryResult.secure_url;
             console.log('☁️ Image Cloudinary:', relativePath);
+          } else if (isTrustedCloudinaryUrl(req.body.profileImageUrl)) {
+            relativePath = req.body.profileImageUrl;
+            console.log('☁️ Image Cloudinary (upload direct):', relativePath);
           }
 
           user = await User.createProviderWithDetails(

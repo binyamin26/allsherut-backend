@@ -1615,6 +1615,15 @@ providerUpdateValues.push(JSON.stringify(updatedDetails));
             providerUpdateValues
           );
           console.log('✅ Service provider mis à jour');
+
+          // ✅ Profil 100% complet → visible immédiatement, sans validation admin
+          const { autoVerifyProviderIfComplete } = require('../utils/profileCompleteness');
+          const runQuery = async (sql, params) => {
+            const [rows] = await connection.execute(sql, params);
+            return rows;
+          };
+          const autoVerified = await autoVerifyProviderIfComplete(runQuery, 'id = ?', [providerId]);
+          if (autoVerified) console.log('✅ Provider auto-vérifié (profil 100% complet)');
         }
 
         // 3. Mettre à jour les zones de travail si fournies
