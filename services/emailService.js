@@ -179,8 +179,32 @@ getEmailHeader(subtitle = '') {
   // ============================================
   // TEMPLATE: Provider New Review Notification
   // ============================================
+  getSubRatingsRows({ qualityRating, priceRating, availabilityRating, professionalismRating }) {
+    const categories = [
+      { label: 'יחס', value: qualityRating },
+      { label: 'מחיר הוגן', value: priceRating },
+      { label: 'זמינות ועמידה בזמנים', value: availabilityRating },
+      { label: 'מקצועיות', value: professionalismRating }
+    ].filter(c => c.value != null);
+
+    if (categories.length === 0) return '';
+
+    const rows = categories.map(c => `
+      <tr>
+        <td style="padding: 4px 0; text-align: right; color: #2D3748; font-size: 14px;">${c.label}</td>
+        <td style="padding: 4px 0; text-align: left; color: #f59e0b; font-size: 14px; white-space: nowrap;">${c.value}/10</td>
+      </tr>
+    `).join('');
+
+    return `
+      <table style="width: 100%; border-collapse: collapse; margin: 10px 0; direction: rtl;">
+        ${rows}
+      </table>
+    `;
+  }
+
   getProviderNewReviewNotificationTemplate(providerData) {
-    const { providerName, providerTitle, rating, reviewerName, comment, title, serviceType } = providerData;
+    const { providerName, providerTitle, rating, qualityRating, priceRating, availabilityRating, professionalismRating, reviewerName, comment, title, serviceType } = providerData;
 
     const serviceNames = {
       'cleaning': 'ניקיון', 'gardening': 'גינון', 'babysitting': 'בייביסיטר',
@@ -214,9 +238,10 @@ getEmailHeader(subtitle = '') {
               </div>
               <div style="margin-bottom: 12px;">
                 <span style="font-size: 22px; color: #f59e0b;">${starsDisplay}</span>
-                <span style="color: #64748b; font-size: 14px; margin-right: 8px;">(${rating}/5)</span>
+                <span style="color: #64748b; font-size: 14px; margin-right: 8px;">(${rating}/10)</span>
               </div>
-              ${title ? `<div style="margin-bottom: 10px; text-align: right;"><strong>כותרת:</strong> ${title}</div>` : ''}
+              ${this.getSubRatingsRows({ qualityRating, priceRating, availabilityRating, professionalismRating })}
+              ${title ? `<div style="margin: 10px 0; text-align: right;"><strong>כותרת:</strong> ${title}</div>` : ''}
               <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; font-style: italic; color: #2D3748; text-align: right; line-height: 1.6;">
                 "${comment}"
               </div>

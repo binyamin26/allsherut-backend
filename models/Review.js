@@ -311,6 +311,10 @@ if (!isAdminBypass) {
         // NOUVEAU : Notification au prestataire pour tous les avis
         await Review.notifyProviderNewReview(actualProviderId, {
           rating,
+          qualityRating,
+          priceRating,
+          availabilityRating,
+          professionalismRating,
           reviewerName,
           comment,
           title,
