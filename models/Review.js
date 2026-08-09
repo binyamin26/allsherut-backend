@@ -344,15 +344,16 @@ if (!isAdminBypass) {
     try {
       // Récupérer les infos du prestataire
       const providerInfo = await query(`
-        SELECT sp.title, u.email as provider_email, u.first_name, u.last_name
-        FROM service_providers sp 
-        JOIN users u ON sp.user_id = u.id 
+        SELECT COALESCE(NULLIF(sp.title, ''), CONCAT(u.first_name, ' ', u.last_name)) as title,
+               u.email as provider_email, u.first_name, u.last_name
+        FROM service_providers sp
+        JOIN users u ON sp.user_id = u.id
         WHERE sp.id = ?
       `, [providerId]);
 
       if (providerInfo.length > 0) {
         const provider = providerInfo[0];
-        
+
         // Envoyer notification email
         await emailService.sendProviderNewReviewNotification(provider.provider_email, {
           providerName: `${provider.first_name} ${provider.last_name}`,
