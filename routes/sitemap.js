@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
       `SELECT sp.id, sp.updated_at
        FROM service_providers sp
        JOIN users u ON sp.user_id = u.id
-       WHERE sp.is_active = TRUE AND u.is_active = TRUE
+       WHERE sp.is_active = TRUE AND u.is_active = TRUE AND sp.verification_status = 'verified'
        ORDER BY sp.updated_at DESC
        LIMIT 5000`
     );

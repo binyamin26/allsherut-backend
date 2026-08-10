@@ -404,12 +404,11 @@ router.get('/:id/review-info', async (req, res) => {
         COALESCE(NULLIF(sp.title, ''), CONCAT(u.first_name, ' ', u.last_name)) as display_name
       FROM service_providers sp
       JOIN users u ON sp.user_id = u.id
-      WHERE (sp.user_id = ? OR sp.id = ?)
+      WHERE sp.id = ?
         AND sp.is_active = TRUE
         AND u.is_active = TRUE
-      ORDER BY (sp.id = ?) DESC
       LIMIT 1
-    `, [providerId, providerId, providerId]);
+    `, [providerId]);
 
     if (result.length === 0) {
       const { errorResponse, statusCode } = ErrorHandler.notFoundError('provider');
@@ -506,17 +505,16 @@ router.get('/:id', async (req, res) => {
   FROM service_providers sp
   JOIN users u ON sp.user_id = u.id
   LEFT JOIN reviews r ON sp.id = r.provider_id AND r.is_published = TRUE
-  
-  WHERE (sp.user_id = ? OR sp.id = ?)
+
+  WHERE sp.id = ?
     AND sp.is_active = TRUE
     AND u.is_active = TRUE
     AND sp.verification_status = 'verified'
 
   GROUP BY sp.id, u.id
-  ORDER BY (sp.id = ?) DESC
 `;
 
-    const provider = await query(providerQuery, [providerId, providerId, providerId]);
+    const provider = await query(providerQuery, [providerId]);
 
     // Gestion provider non trouvé
     if (provider.length === 0) {
