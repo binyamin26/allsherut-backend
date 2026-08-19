@@ -402,7 +402,8 @@ router.get('/:id/review-info', async (req, res) => {
         sp.service_type,
         sp.location_city,
         sp.profile_image,
-        COALESCE(NULLIF(sp.title, ''), CONCAT(u.first_name, ' ', u.last_name)) as display_name
+        COALESCE(NULLIF(sp.service_details->>'$.service_first_name', ''), u.first_name) as first_name,
+        COALESCE(NULLIF(sp.service_details->>'$.service_last_name', ''), u.last_name) as last_name
       FROM service_providers sp
       JOIN users u ON sp.user_id = u.id
       WHERE sp.id = ?
@@ -419,7 +420,7 @@ router.get('/:id/review-info', async (req, res) => {
     const provider = result[0];
     res.success('פרטי ספק נטענו', {
       id: provider.id,
-      displayName: provider.display_name,
+      displayName: `${provider.first_name} ${provider.last_name}`.trim(),
       serviceType: provider.service_type,
       locationCity: provider.location_city,
       profileImage: provider.profile_image
