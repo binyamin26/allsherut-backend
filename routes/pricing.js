@@ -33,17 +33,31 @@ router.get('/provider/:providerId', async (req, res) => {
 router.get('/my', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
+    const requestedProviderId = parseInt(req.query.providerId);
 
-    const providers = await query(
-      'SELECT id FROM service_providers WHERE user_id = ? AND is_active = TRUE LIMIT 1',
-      [userId]
-    );
-
-    if (!providers || providers.length === 0) {
-      return res.json({ success: true, data: [] });
+    let providerId;
+    if (!isNaN(requestedProviderId) && requestedProviderId > 0) {
+      // Un prestataire multi-services : ne renvoyer que le tarif du service demandé,
+      // après vérification que ce service_provider appartient bien à cet utilisateur.
+      const owned = await query(
+        'SELECT id FROM service_providers WHERE id = ? AND user_id = ? AND is_active = TRUE LIMIT 1',
+        [requestedProviderId, userId]
+      );
+      if (!owned || owned.length === 0) {
+        return res.status(403).json({ success: false, message: 'שירות זה אינו שייך לחשבון שלך' });
+      }
+      providerId = owned[0].id;
+    } else {
+      const providers = await query(
+        'SELECT id FROM service_providers WHERE user_id = ? AND is_active = TRUE LIMIT 1',
+        [userId]
+      );
+      if (!providers || providers.length === 0) {
+        return res.json({ success: true, data: [] });
+      }
+      providerId = providers[0].id;
     }
 
-    const providerId = providers[0].id;
     const rows = await query(
       'SELECT id, service_name, price, is_title, sort_order FROM provider_pricing WHERE provider_id = ? ORDER BY sort_order ASC, id ASC',
       [providerId]
@@ -63,7 +77,7 @@ router.get('/my', authenticateToken, async (req, res) => {
 router.put('/my', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { items } = req.body;
+    const { items, providerId: requestedProviderId } = req.body;
 
     if (!Array.isArray(items)) {
       return res.status(400).json({ success: false, message: 'Format invalide' });
@@ -88,16 +102,27 @@ router.put('/my', authenticateToken, async (req, res) => {
       }
     }
 
-    const providers = await query(
-      'SELECT id FROM service_providers WHERE user_id = ? AND is_active = TRUE LIMIT 1',
-      [userId]
-    );
-
-    if (!providers || providers.length === 0) {
-      return res.status(404).json({ success: false, message: 'Profil prestataire introuvable' });
+    let providerId;
+    const parsedProviderId = parseInt(requestedProviderId);
+    if (!isNaN(parsedProviderId) && parsedProviderId > 0) {
+      const owned = await query(
+        'SELECT id FROM service_providers WHERE id = ? AND user_id = ? AND is_active = TRUE LIMIT 1',
+        [parsedProviderId, userId]
+      );
+      if (!owned || owned.length === 0) {
+        return res.status(403).json({ success: false, message: 'שירות זה אינו שייך לחשבון שלך' });
+      }
+      providerId = owned[0].id;
+    } else {
+      const providers = await query(
+        'SELECT id FROM service_providers WHERE user_id = ? AND is_active = TRUE LIMIT 1',
+        [userId]
+      );
+      if (!providers || providers.length === 0) {
+        return res.status(404).json({ success: false, message: 'Profil prestataire introuvable' });
+      }
+      providerId = providers[0].id;
     }
-
-    const providerId = providers[0].id;
 
     // Supprimer tous les tarifs existants
     await query('DELETE FROM provider_pricing WHERE provider_id = ?', [providerId]);
