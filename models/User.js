@@ -1023,6 +1023,16 @@ static async updateServiceProviderWithDetails(connection, providerId, serviceTyp
     return errors;
   }
 
+  // Langues parlées : obligatoire pour s'inscrire (au moins une langue)
+  if (!serviceDetails.languages || serviceDetails.languages.length === 0) {
+    errors.push({ field: 'languages', message: 'יש לבחור לפחות שפה אחת' });
+  }
+
+  // Années d'expérience : obligatoire pour s'inscrire
+  if (!serviceDetails.experience) {
+    errors.push({ field: 'experience', message: 'שנות ניסיון נדרשות' });
+  }
+
   // Validation par service
   switch (serviceType) {
     case 'babysitting':

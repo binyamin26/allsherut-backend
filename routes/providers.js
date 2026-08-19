@@ -401,6 +401,7 @@ router.get('/:id/review-info', async (req, res) => {
         sp.id,
         sp.service_type,
         sp.location_city,
+        sp.profile_image,
         COALESCE(NULLIF(sp.title, ''), CONCAT(u.first_name, ' ', u.last_name)) as display_name
       FROM service_providers sp
       JOIN users u ON sp.user_id = u.id
@@ -420,7 +421,8 @@ router.get('/:id/review-info', async (req, res) => {
       id: provider.id,
       displayName: provider.display_name,
       serviceType: provider.service_type,
-      locationCity: provider.location_city
+      locationCity: provider.location_city,
+      profileImage: provider.profile_image
     });
 
   } catch (error) {

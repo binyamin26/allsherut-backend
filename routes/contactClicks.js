@@ -16,14 +16,15 @@ const authenticateToken = (req, res, next) => {
 // POST /api/contact-clicks — public, log a click
 router.post('/', async (req, res) => {
   try {
-    const { provider_id, click_type, source } = req.body;
+    const { provider_id, click_type, source, client_phone } = req.body;
     if (!provider_id || !['call', 'whatsapp'].includes(click_type)) {
       return res.status(400).json({ success: false, message: 'Invalid payload' });
     }
     const clickSource = source === 'recruitment' ? 'recruitment' : 'service';
+    const clientPhone = (client_phone || '').trim().slice(0, 30) || null;
     await query(
-      'INSERT INTO contact_clicks (provider_id, click_type, source) VALUES (?, ?, ?)',
-      [provider_id, click_type, clickSource]
+      'INSERT INTO contact_clicks (provider_id, click_type, source, client_phone) VALUES (?, ?, ?, ?)',
+      [provider_id, click_type, clickSource, clientPhone]
     );
     const lastId = await query('SELECT LAST_INSERT_ID() as newId');
     const newId = lastId[0]?.newId;
@@ -104,7 +105,7 @@ router.get('/my-clicks', authenticateToken, async (req, res) => {
 
     // Paginated clicks
     const clicks = await query(
-      `SELECT id, click_type, source, clicked_at
+      `SELECT id, click_type, source, client_phone, clicked_at
        FROM contact_clicks
        WHERE provider_id IN (${inClause}) ${periodWhere}
        ORDER BY clicked_at DESC

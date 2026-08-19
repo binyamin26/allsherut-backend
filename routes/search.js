@@ -360,7 +360,7 @@ case 'qualifications':
 
       // Filtres spécifiques cleaning
       case 'legalStatus':
-        conditions.push(`sp.availability->>'$.legalStatus' = ?`);
+        conditions.push(`sp.service_details->>'$.legalStatus' = ?`);
         params.push(value);
         break;
 
@@ -368,13 +368,13 @@ case 'qualifications':
         const cleaningArray = value.split(',').map(v => v.trim());
         if (cleaningArray.length > 0) {
           const placeholders = cleaningArray.map(() => '?').join(',');
-          conditions.push(`JSON_OVERLAPS(sp.availability->'$.cleaningTypes', JSON_ARRAY(${placeholders}))`);
+          conditions.push(`JSON_OVERLAPS(sp.service_details->'$.cleaningTypes', JSON_ARRAY(${placeholders}))`);
           params.push(...cleaningArray);
         }
         break;
 
       case 'materialsProvided':
-        conditions.push(`sp.availability->>'$.materialsProvided' = ?`);
+        conditions.push(`sp.service_details->>'$.materialsProvided' = ?`);
         params.push(value);
         break;
 
