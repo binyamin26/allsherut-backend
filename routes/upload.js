@@ -310,7 +310,7 @@ router.post('/gallery-image', authenticateToken, upload.single('galleryImage'), 
             public_id: `gallery-${userId}-${serviceType}-${Date.now()}`,
             resource_type: 'image',
             transformation: [
-              { width: 800, height: 600, crop: 'fill' },
+              { width: 800, height: 600, crop: 'limit' },
               { quality: 'auto', fetch_format: 'auto' }
             ]
           },
