@@ -48,7 +48,7 @@ router.get('/search/:serviceType', async (req, res) => {
     console.log(DEV_LOGS.API.REQUEST_RECEIVED, `location/search/${serviceType}`, req.query);
 
     // Validation du type de service
-    const validServices = ['babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'eldercare'];
+    const validServices = ['babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'eldercare', 'doula'];
     if (!validServices.includes(serviceType)) {
       const { errorResponse, statusCode } = ErrorHandler.validationError([{
         field: 'serviceType',
@@ -173,7 +173,7 @@ router.get('/suggestions', async (req, res) => {
     }
 
     // Validation du type de service si fourni
-    const validServices = ['babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'eldercare'];
+    const validServices = ['babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'eldercare', 'doula'];
     if (serviceType && !validServices.includes(serviceType)) {
       const { errorResponse, statusCode } = ErrorHandler.validationError([{
         field: 'serviceType',
@@ -302,7 +302,7 @@ router.post('/coordinates/:serviceType/:serviceId',
       console.log(DEV_LOGS.API.REQUEST_RECEIVED, `location/coordinates/${serviceType}/${serviceId}`, req.body);
 
       // Validation des paramètres URL
-      const validServices = ['babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'eldercare'];
+      const validServices = ['babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'eldercare', 'doula'];
       if (!validServices.includes(serviceType)) {
         const { errorResponse, statusCode } = ErrorHandler.validationError([{
           field: 'serviceType',
