@@ -101,46 +101,6 @@ class LocationController {
   }
 
   /**
-   * API endpoint: Statistiques par localisation
-   * GET /api/location/stats/:city
-   */
-  static async getLocationStats(req, res) {
-    try {
-      const { city } = req.params;
-      const normalizedCity = normalizeCity(city);
-      
-      if (!normalizedCity) {
-        return res.status(400).json({
-          success: false,
-          error: 'Ville non reconnue'
-        });
-      }
-
-      const stats = {};
-      const serviceTypes = ['babysitting', 'menage', 'jardinage', 'aide_personne_agee', 'soutien_scolaire', 'garde_animaux'];
-
-      // Compter les services par type
-      for (const serviceType of serviceTypes) {
-        const countResult = await Location.getServiceCountByCity(normalizedCity, serviceType);
-        stats[serviceType] = countResult.count || 0;
-      }
-
-      res.json({
-        success: true,
-        city: normalizedCity,
-        stats,
-        total: Object.values(stats).reduce((sum, count) => sum + count, 0)
-      });
-    } catch (error) {
-      console.error('Erreur endpoint stats localisation:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Erreur serveur'
-      });
-    }
-  }
-
-  /**
    * API endpoint: Mettre à jour coordonnées GPS
    * POST /api/location/coordinates/:serviceType/:serviceId
    */

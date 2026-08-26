@@ -206,73 +206,6 @@ router.get('/suggestions', async (req, res) => {
   }
 });
 
-/**
- * GET /api/location/stats/:city
- * Statistiques détaillées des services par ville
- * 
- * Paramètres URL:
- * - city: nom de la ville
- * 
- * Query params:
- * - period: day, week, month, year (défaut: month)
- */
-router.get('/stats/:city', async (req, res) => {
-  try {
-    const { city } = req.params;
-    const { period = 'month' } = req.query;
-
-    console.log(DEV_LOGS.API.REQUEST_RECEIVED, `location/stats/${city}`, { period });
-
-    // Validation de la ville
-    if (!city || city.trim().length < 2) {
-      const { errorResponse, statusCode } = ErrorHandler.validationError([{
-        field: 'city',
-        message: MESSAGES.ERROR.VALIDATION.CITY_REQUIRED
-      }]);
-      return res.status(statusCode).json(errorResponse);
-    }
-
-    // Validation de la période
-    const validPeriods = ['day', 'week', 'month', 'year'];
-    if (!validPeriods.includes(period)) {
-      const { errorResponse, statusCode } = ErrorHandler.validationError([{
-        field: 'period',
-        message: MESSAGES.ERROR.VALIDATION.INVALID_PERIOD
-      }]);
-      return res.status(statusCode).json(errorResponse);
-    }
-
-    const stats = await LocationController.getLocationStats({
-      city: city.trim(),
-      period
-    });
-
-    if (!stats || stats.totalProviders === 0) {
-      console.log(DEV_LOGS.API.RESPONSE_SENT, `Aucune donnée pour la ville: ${city}`);
-      
-      const { errorResponse, statusCode } = ErrorHandler.notFoundError('city', 
-        MESSAGES.ERROR.RESOURCE.CITY_NOT_FOUND.replace('{city}', city)
-      );
-      return res.status(statusCode).json(errorResponse);
-    }
-
-    console.log(DEV_LOGS.API.RESPONSE_SENT, `Statistiques chargées pour ${city}`);
-
-    res.success(MESSAGES.SUCCESS.SYSTEM.STATS_LOADED, {
-      city: city.trim(),
-      period,
-      statistics: stats,
-      updatedAt: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error(DEV_LOGS.API.ERROR_OCCURRED, 'location/stats', error.message);
-    
-    const { errorResponse, statusCode } = ErrorHandler.serverError(error);
-    res.status(statusCode).json(errorResponse);
-  }
-});
-
 // =============================================
 // ROUTES PROTÉGÉES (auth requise)
 // =============================================
@@ -463,7 +396,6 @@ router.get('/test', (req, res) => {
       availableEndpoints: [
         'GET /api/location/search/:serviceType',
         'GET /api/location/suggestions',
-        'GET /api/location/stats/:city',
         'POST /api/location/coordinates/:serviceType/:serviceId [AUTH]',
         'DELETE /api/location/coordinates/:serviceId [AUTH]'
       ]
