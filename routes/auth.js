@@ -20,6 +20,7 @@ const fs = require('fs').promises;
 
 const router = express.Router();
 const { query } = require('../config/database');
+const { purgeProviderService } = require('../utils/purgeProvider');
 
 // ===== FONCTION DE VALIDATION SÉCURISÉE DES MOTS DE PASSE =====
 const validatePasswordComplexity = (password) => {
@@ -807,37 +808,78 @@ router.post('/reset-password', resetPasswordLimiter, [
 });
 
 // =============================================
+// Décodage + lecture commune du token de vérification prestataire
+// =============================================
+const loadVerificationTarget = async (token) => {
+  let decoded;
+  try {
+    decoded = jwt.verify(token, config.jwt.secret);
+  } catch (err) {
+    return { error: ErrorHandler.CODES.TOKEN_INVALID };
+  }
+  if (decoded.type !== 'provider_verification' || !['approve', 'reject'].includes(decoded.action)) {
+    return { error: ErrorHandler.CODES.TOKEN_INVALID };
+  }
+
+  const rows = await query(
+    `SELECT sp.id, sp.verification_status, sp.service_type, sp.user_id, u.first_name, u.last_name
+       FROM service_providers sp
+       JOIN users u ON u.id = sp.user_id
+      WHERE sp.id = ?`,
+    [decoded.providerId]
+  );
+
+  return { decoded, provider: rows[0] || null };
+};
+
+// =============================================
+// GET /api/auth/verify-provider/:token
+// Aperçu (aucune modification) — alimente l'écran de confirmation admin
+// =============================================
+router.get('/verify-provider/:token', async (req, res) => {
+  try {
+    const { decoded, provider, error } = await loadVerificationTarget(req.params.token);
+    if (error) return res.error(error);
+
+    if (!provider) {
+      // déjà traité/supprimé, ou id inconnu
+      return res.success('לא נמצא', { notFound: true, action: decoded.action });
+    }
+
+    const providerName = `${provider.first_name} ${provider.last_name}`.trim();
+    const others = await query(
+      'SELECT COUNT(*) c FROM service_providers WHERE user_id = ? AND id <> ?',
+      [provider.user_id, provider.id]
+    );
+    const otherServices = others[0].c;
+
+    return res.success('ok', {
+      action: decoded.action,
+      providerName,
+      serviceType: provider.service_type,
+      alreadyProcessed: provider.verification_status !== 'pending',
+      status: provider.verification_status,
+      otherServices,
+      willDeleteAccount: decoded.action === 'reject' && otherServices === 0
+    });
+  } catch (err) {
+    console.error(DEV_LOGS.API.ERROR_OCCURRED, 'Provider verification preview:', err);
+    res.serverError(err);
+  }
+});
+
+// =============================================
 // POST /api/auth/verify-provider/:token
-// Approbation / refus d'un prestataire via le lien envoyé par email à l'admin
+// Approbation / refus d'un prestataire via le lien envoyé par email à l'admin.
+// approve  -> verification_status = 'verified'
+// reject   -> suppression complète de la fiche (+ du compte si c'était la dernière)
 // =============================================
 router.post('/verify-provider/:token', async (req, res) => {
   try {
-    const { token } = req.params;
+    const { decoded, provider, error } = await loadVerificationTarget(req.params.token);
+    if (error) return res.error(error);
+    if (!provider) return res.error(ErrorHandler.CODES.PROVIDER_NOT_FOUND);
 
-    let decoded;
-    try {
-      decoded = jwt.verify(token, config.jwt.secret);
-    } catch (err) {
-      return res.error(ErrorHandler.CODES.TOKEN_INVALID);
-    }
-
-    if (decoded.type !== 'provider_verification' || !['approve', 'reject'].includes(decoded.action)) {
-      return res.error(ErrorHandler.CODES.TOKEN_INVALID);
-    }
-
-    const rows = await query(
-      `SELECT sp.id, sp.verification_status, sp.service_type, u.first_name, u.last_name
-       FROM service_providers sp
-       JOIN users u ON u.id = sp.user_id
-       WHERE sp.id = ?`,
-      [decoded.providerId]
-    );
-
-    if (rows.length === 0) {
-      return res.error(ErrorHandler.CODES.PROVIDER_NOT_FOUND);
-    }
-
-    const provider = rows[0];
     const providerName = `${provider.first_name} ${provider.last_name}`.trim();
 
     if (provider.verification_status !== 'pending') {
@@ -849,17 +891,32 @@ router.post('/verify-provider/:token', async (req, res) => {
       });
     }
 
-    const newStatus = decoded.action === 'approve' ? 'verified' : 'rejected';
+    if (decoded.action === 'approve') {
+      await query(
+        'UPDATE service_providers SET verification_status = ? WHERE id = ?',
+        ['verified', provider.id]
+      );
+      return res.success('הסטטוס עודכן בהצלחה', {
+        alreadyProcessed: false,
+        action: 'approve',
+        status: 'verified',
+        providerName,
+        serviceType: provider.service_type
+      });
+    }
 
-    await query(
-      'UPDATE service_providers SET verification_status = ? WHERE id = ?',
-      [newStatus, provider.id]
-    );
+    // reject -> hard delete (trial_history conservé : anti-abus)
+    const result = await purgeProviderService(provider.id, {
+      deleteAccountIfLast: true,
+      keepTrial: true
+    });
+    console.log(DEV_LOGS.API.REQUEST_RECEIVED, `verify-provider reject purge #${provider.id}:`, result.log);
 
-    return res.success('הסטטוס עודכן בהצלחה', {
+    return res.success('הפרופיל נמחק', {
       alreadyProcessed: false,
-      action: decoded.action,
-      status: newStatus,
+      action: 'reject',
+      status: 'deleted',
+      accountDeleted: result.accountDeleted,
       providerName,
       serviceType: provider.service_type
     });
