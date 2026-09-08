@@ -21,9 +21,18 @@
  *   plus the service_details JSON service_first_name / service_last_name.
  * - Also destroys the user's Cloudinary images (profile + gallery) unless
  *   --keep-images is passed. Needs CLOUDINARY_* env vars (present in the Fly VM).
+ * - Also removes trial_history rows (by original_user_id / email_hash) unless
+ *   --keep-trial is passed (keep = the email stays blocked from a new free trial).
  */
 
+const crypto = require('crypto');
 const { pool, query, transaction } = require('../config/database');
+
+// same as TrialHistory.hashEmail
+function emailHash(email) {
+  if (!email) return null;
+  return crypto.createHash('sha256').update(email.toLowerCase().trim()).digest('hex');
+}
 
 let cloudinary = null;
 try {
@@ -89,6 +98,7 @@ const USER_ID = arg('user-id');
 const DRY = !!arg('dry');
 const YES = !!arg('yes');
 const KEEP_IMAGES = !!arg('keep-images');
+const KEEP_TRIAL = !!arg('keep-trial');
 
 const DEFAULT_PATTERNS = [
   '%bouchoucha%', '%bouchoucha%', '%boushousha%', '%bochoucha%',
@@ -177,9 +187,12 @@ async function report(user) {
   }
 
   try {
-    const th = await query('SELECT COUNT(*) c FROM trial_history WHERE email = ?', [user.email]);
-    if (th[0].c > 0) console.log(`  trial_history (by email): ${th[0].c}`);
-  } catch (e) { /* table may not exist */ }
+    const th = await query(
+      'SELECT COUNT(*) c FROM trial_history WHERE original_user_id = ? OR email_hash = ?',
+      [uid, emailHash(user.email)]
+    );
+    if (th[0].c > 0) console.log(`  trial_history (original_user_id / email_hash): ${th[0].c}`);
+  } catch (e) { console.log('  trial_history check failed:', e.message); }
 
   const imageUrls = collectImageUrls(user, providers);
   console.log(`cloudinary images (${imageUrls.length})${KEEP_IMAGES ? ' [--keep-images: will NOT delete]' : ''}:`);
@@ -214,10 +227,15 @@ async function purge(user, providerIds) {
     const [spRes] = await conn.query('DELETE FROM service_providers WHERE user_id = ?', [uid]);
     if (spRes.affectedRows) console.log(`  - service_providers: ${spRes.affectedRows}`);
 
-    try {
-      const [thRes] = await conn.query('DELETE FROM trial_history WHERE email = ?', [user.email]);
-      if (thRes.affectedRows) console.log(`  - trial_history: ${thRes.affectedRows}`);
-    } catch (e) { /* ignore */ }
+    if (!KEEP_TRIAL) {
+      try {
+        const [thRes] = await conn.query(
+          'DELETE FROM trial_history WHERE original_user_id = ? OR email_hash = ?',
+          [uid, emailHash(user.email)]
+        );
+        if (thRes.affectedRows) console.log(`  - trial_history: ${thRes.affectedRows}`);
+      } catch (e) { console.log('  ! trial_history delete failed:', e.message); }
+    }
 
     const [uRes] = await conn.query('DELETE FROM users WHERE id = ?', [uid]);
     console.log(`  - users: ${uRes.affectedRows}`);
