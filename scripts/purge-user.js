@@ -19,10 +19,63 @@
  * - Refuses to delete unless exactly one user is targeted via --user-id.
  * - --search matches first_name / last_name / email (LIKE, case-insensitive)
  *   plus the service_details JSON service_first_name / service_last_name.
- * - Does NOT delete Cloudinary images (external) — handle those separately if needed.
+ * - Also destroys the user's Cloudinary images (profile + gallery) unless
+ *   --keep-images is passed. Needs CLOUDINARY_* env vars (present in the Fly VM).
  */
 
 const { pool, query, transaction } = require('../config/database');
+
+let cloudinary = null;
+try {
+  cloudinary = require('cloudinary').v2;
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+} catch (e) {
+  console.log('(cloudinary module unavailable:', e.message, ')');
+}
+
+// public_id from a Cloudinary URL — same logic as routes/upload.js deleteFromCloudinary
+function publicIdFromUrl(url) {
+  if (typeof url !== 'string') return null;
+  const parts = url.split('/upload/');
+  if (parts.length < 2) return null;
+  return parts[1].replace(/^v\d+\//, '').replace(/\.[^.]+$/, '');
+}
+
+function collectImageUrls(user, providers) {
+  const urls = new Set();
+  const add = (v) => {
+    if (!v) return;
+    let arr = v;
+    if (typeof v === 'string' && v.trim().startsWith('[')) {
+      try { arr = JSON.parse(v); } catch (e) { arr = [v]; }
+    }
+    (Array.isArray(arr) ? arr : [arr]).forEach(u => {
+      if (typeof u === 'string' && u.includes('res.cloudinary.com')) urls.add(u);
+    });
+  };
+  add(user.profile_image);
+  add(user.profile_image_path);
+  providers.forEach(p => { add(p.profile_image); add(p.profile_images); });
+  return [...urls];
+}
+
+async function destroyImages(urls) {
+  if (!cloudinary || urls.length === 0) return;
+  for (const url of urls) {
+    const pid = publicIdFromUrl(url);
+    if (!pid) { console.log(`  ? could not parse public_id: ${url}`); continue; }
+    try {
+      const res = await cloudinary.uploader.destroy(pid);
+      console.log(`  - cloudinary destroy ${pid}: ${res.result}`);
+    } catch (err) {
+      console.log(`  ! cloudinary destroy ${pid} failed: ${err.message}`);
+    }
+  }
+}
 
 function arg(name, def = undefined) {
   const hit = process.argv.find(a => a === `--${name}` || a.startsWith(`--${name}=`));
@@ -35,6 +88,7 @@ const SEARCH = arg('search');
 const USER_ID = arg('user-id');
 const DRY = !!arg('dry');
 const YES = !!arg('yes');
+const KEEP_IMAGES = !!arg('keep-images');
 
 const DEFAULT_PATTERNS = [
   '%bouchoucha%', '%bouchoucha%', '%boushousha%', '%bochoucha%',
@@ -127,7 +181,11 @@ async function report(user) {
     if (th[0].c > 0) console.log(`  trial_history (by email): ${th[0].c}`);
   } catch (e) { /* table may not exist */ }
 
-  return { providerIds };
+  const imageUrls = collectImageUrls(user, providers);
+  console.log(`cloudinary images (${imageUrls.length})${KEEP_IMAGES ? ' [--keep-images: will NOT delete]' : ''}:`);
+  imageUrls.forEach(u => console.log(`  ${u}`));
+
+  return { providers, providerIds, imageUrls };
 }
 
 async function purge(user, providerIds) {
@@ -177,8 +235,8 @@ async function main() {
   console.log(`Found ${candidates.length} candidate user(s).`);
   const scoped = [];
   for (const u of candidates) {
-    const { providerIds } = await report(u);
-    scoped.push({ u, providerIds });
+    const { providerIds, imageUrls } = await report(u);
+    scoped.push({ u, providerIds, imageUrls });
   }
 
   if (DRY || !YES) {
@@ -188,6 +246,11 @@ async function main() {
   if (!USER_ID || candidates.length !== 1) {
     console.log('\nREFUSING to delete: pass --user-id=<id> and make sure it resolves to exactly one user.');
     return;
+  }
+
+  if (!KEEP_IMAGES) {
+    console.log(`\nDestroying ${scoped[0].imageUrls.length} Cloudinary image(s) ...`);
+    await destroyImages(scoped[0].imageUrls);
   }
 
   console.log(`\nPurging user id=${candidates[0].id} ...`);
