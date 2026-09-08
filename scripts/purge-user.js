@@ -242,7 +242,33 @@ async function purge(user, providerIds) {
   });
 }
 
+async function listRejected() {
+  const rows = await query(
+    `SELECT u.id, u.email, u.first_name, u.last_name, u.is_active,
+            GROUP_CONCAT(sp.service_type) AS services,
+            SUM(sp.verification_status = 'rejected') AS rejected_count,
+            COUNT(*) AS total_services
+       FROM users u
+       JOIN service_providers sp ON sp.user_id = u.id
+      WHERE u.role = 'provider'
+      GROUP BY u.id
+     HAVING rejected_count > 0
+      ORDER BY u.id`
+  );
+  console.log(`Users with at least one 'rejected' listing: ${rows.length}`);
+  rows.forEach(r => console.log(
+    `  user id=${r.id} | ${r.first_name} ${r.last_name} | ${r.email} | ` +
+    `${r.rejected_count}/${r.total_services} rejected | services: ${r.services}`
+  ));
+  console.log('\nPurge one with:  node scripts/purge-user.js --user-id=<id> --yes');
+}
+
 async function main() {
+  if (arg('list-rejected')) {
+    await listRejected();
+    return;
+  }
+
   const candidates = await findCandidates();
 
   if (candidates.length === 0) {
