@@ -495,6 +495,7 @@ router.get('/:id', async (req, res) => {
     u.last_name,
     u.email,
     u.phone,
+    u.whatsapp_phone,
     u.premium_until,
     sp.profile_image as provider_profile_image,
     sp.profile_images as provider_gallery_images,
@@ -569,6 +570,7 @@ router.get('/:id', async (req, res) => {
       lastName: serviceLastName,
       email: providerData.email,
       phone: providerData.phone,
+      whatsappPhone: providerData.whatsapp_phone || null,
       verified: providerData.verification_status === 'verified',
       premium: providerData.premium_until && new Date(providerData.premium_until) > new Date(),
       
@@ -644,6 +646,7 @@ serviceDetails: {
       // Contact
       contact: {
         phone: providerData.phone,
+        whatsappPhone: providerData.whatsapp_phone || null,
         hasPhone: !!providerData.phone,
         responseTime: 'לא צוין'
       },

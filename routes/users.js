@@ -70,7 +70,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
     }
 
     // Mettre à jour les champs de base autorisés
-    const allowedUpdates = ['first_name', 'last_name', 'phone'];
+    const allowedUpdates = ['first_name', 'last_name', 'phone', 'whatsapp_phone'];
     const userUpdates = {};
     
     allowedUpdates.forEach(field => {

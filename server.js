@@ -364,7 +364,8 @@ const runMigrations = async () => {
       INDEX idx_clicked_at (clicked_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`],
     ['contact_clicks source column', `ALTER TABLE contact_clicks ADD COLUMN source ENUM('service','recruitment') NOT NULL DEFAULT 'service' AFTER click_type`],
-    ['provider_responses table', `CREATE TABLE IF NOT EXISTS provider_responses (
+    ['users whatsapp_phone column', `ALTER TABLE users ADD COLUMN whatsapp_phone VARCHAR(20) NULL`],
+    ['provider_responses table',`CREATE TABLE IF NOT EXISTS provider_responses (
       id INT PRIMARY KEY AUTO_INCREMENT,
       review_id INT NOT NULL,
       provider_user_id INT NOT NULL,

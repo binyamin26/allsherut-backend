@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
   first_name VARCHAR(100) NOT NULL,
   last_name VARCHAR(100) NOT NULL,
   phone VARCHAR(20),
+  whatsapp_phone VARCHAR(20) NULL,
   role ENUM('user', 'client', 'provider', 'admin') DEFAULT 'client',
   service_type ENUM('babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'eldercare'),
   is_active BOOLEAN DEFAULT TRUE,

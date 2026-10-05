@@ -28,6 +28,7 @@ router.get('/listing/:id', async (req, res) => {
         u.first_name,
         u.last_name,
         u.phone,
+        u.whatsapp_phone,
         sp.profile_image,
         COALESCE(jl.location_city, sp.location_city) AS location_city,
         COALESCE(jl.location_area, sp.location_area) AS location_area

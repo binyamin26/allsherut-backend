@@ -21,6 +21,7 @@ const fs = require('fs').promises;
 const router = express.Router();
 const { query } = require('../config/database');
 const { purgeProviderService } = require('../utils/purgeProvider');
+const { normalizeWhatsappPhone } = require('../utils/whatsappPhone');
 
 // ===== FONCTION DE VALIDATION SÉCURISÉE DES MOTS DE PASSE =====
 const validatePasswordComplexity = (password) => {
@@ -268,6 +269,7 @@ body('phone').optional()
         lastName: name.split(' ').slice(1).join(' ') || '',
         email: email?.trim() || '',
         phone: phone?.replace(/[\s-]/g, '') || '',
+        whatsappPhone: normalizeWhatsappPhone(req.body.whatsappPhone),
         password,
         role,
         serviceType,
@@ -1003,6 +1005,7 @@ router.put('/me', authenticateToken, [
     if (req.body.firstName) updateData.first_name = req.body.firstName;
     if (req.body.lastName) updateData.last_name = req.body.lastName;
     if (req.body.phone) updateData.phone = req.body.phone;
+    if (req.body.whatsappPhone !== undefined) updateData.whatsapp_phone = normalizeWhatsappPhone(req.body.whatsappPhone);
     if (req.body.profileImage !== undefined) updateData.profile_image = req.body.profileImage;
 
     // Mise à jour du profil
@@ -1413,6 +1416,7 @@ body('experienceYears').optional({ nullable: true, checkFalsy: true }).isInt({ m
         lastName: req.body.lastName,
         email: req.body.email,
         phone: req.body.phone,
+        whatsappPhone: req.body.whatsappPhone === undefined ? undefined : normalizeWhatsappPhone(req.body.whatsappPhone),
         description: req.body.description,
         experienceYears: req.body.experienceYears,
         availability: req.body.availability,

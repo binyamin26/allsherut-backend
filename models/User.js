@@ -9,6 +9,7 @@ class User {
     this.first_name = userData.first_name;
     this.last_name = userData.last_name;
     this.phone = userData.phone;
+    this.whatsapp_phone = userData.whatsapp_phone;
     this.role = userData.role;
     this.service_type = userData.service_type;
     this.is_active = userData.is_active;
@@ -85,8 +86,8 @@ if (userData.role === 'provider') {
   // Si email existe mais pas ce service : ajouter le service
   if (existingUser) {
     await connection.execute(
-      'UPDATE users SET service_type = ?, phone = COALESCE(?, phone), updated_at = NOW() WHERE id = ?',
-      [userData.serviceType, userData.phone, existingUser.id]
+      'UPDATE users SET service_type = ?, phone = COALESCE(?, phone), whatsapp_phone = COALESCE(?, whatsapp_phone), updated_at = NOW() WHERE id = ?',
+      [userData.serviceType, userData.phone, userData.whatsappPhone || null, existingUser.id]
     );
 
     await connection.execute(`
@@ -155,16 +156,17 @@ if (userData.role === 'provider') {
         // Insérer l'utilisateur
         const [userResult] = await connection.execute(`
           INSERT INTO users (
-            email, password, first_name, last_name, phone, 
-            role, service_type, premium_until, is_active, 
+            email, password, first_name, last_name, phone, whatsapp_phone,
+            role, service_type, premium_until, is_active,
             tokenVersion, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, 0, NOW())
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, 0, NOW())
         `, [
           userData.email.toLowerCase().trim(),
           hashedPassword,
           userData.firstName || userData.first_name || null,
           (userData.lastName ?? userData.last_name) ?? null,
           userData.phone || null,
+          userData.whatsappPhone || null,
           userData.role,
           userData.serviceType || userData.service_type || null,
           premiumUntil
@@ -303,7 +305,7 @@ try {
       const updateValues = [];
 
       const allowedFields = [
-        'first_name', 'last_name', 'phone', 'profile_image'
+        'first_name', 'last_name', 'phone', 'whatsapp_phone', 'profile_image'
       ];
 
       allowedFields.forEach(field => {
@@ -693,6 +695,7 @@ static async hasService(email, serviceType) {
       firstName: this.first_name,
       lastName: this.last_name,
       phone: this.phone,
+      whatsappPhone: this.whatsapp_phone || null,
       role: this.role,
       serviceType: this.service_type,
       isActive: this.is_active,
@@ -1525,6 +1528,10 @@ async updateFullProfile(profileData) {
         userUpdateFields.push('phone = ?');
         userUpdateValues.push(profileData.phone || null);
       }
+      if (profileData.whatsappPhone !== undefined) {
+        userUpdateFields.push('whatsapp_phone = ?');
+        userUpdateValues.push(profileData.whatsappPhone || null);
+      }
 
       if (userUpdateFields.length > 0) {
         userUpdateFields.push('updated_at = NOW()');
@@ -1663,6 +1670,7 @@ providerUpdateValues.push(JSON.stringify(updatedDetails));
       if (profileData.lastName !== undefined) this.last_name = profileData.lastName || '';
       if (profileData.email) this.email = profileData.email.toLowerCase().trim();
       if (profileData.phone !== undefined) this.phone = profileData.phone;
+      if (profileData.whatsappPhone !== undefined) this.whatsapp_phone = profileData.whatsappPhone || null;
 
       console.log('🎉 Mise à jour profil complet réussie');
       return true;
