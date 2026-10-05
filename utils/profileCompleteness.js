@@ -1,5 +1,8 @@
 // Critères identiques à ProfileCompletionCard.jsx (frontend) :
 // photo, galerie, expérience, description, langues — chacun pèse 20%.
+// Exception : pour les services de GALLERY_OPTIONAL_SERVICES la galerie n'est pas
+// requise (4 critères restants, 25% chacun).
+const GALLERY_OPTIONAL_SERVICES = ['babysitting', 'property_management'];
 // Un profil à 100% passe automatiquement en verification_status='verified',
 // sans validation manuelle par l'admin.
 
@@ -25,11 +28,11 @@ function parseJsonObject(value) {
   }
 }
 
-function isProfileComplete({ profile_image, profile_images, service_details }) {
+function isProfileComplete({ profile_image, profile_images, service_details, service_type }) {
   const details = parseJsonObject(service_details);
 
   const hasPhoto = !!profile_image;
-  const hasGallery = parseJsonArray(profile_images).length > 0;
+  const hasGallery = GALLERY_OPTIONAL_SERVICES.includes(service_type) || parseJsonArray(profile_images).length > 0;
   const hasExperience = Number(details.experience_years) > 0;
   const hasDescription = !!(details.description || '').trim();
   const hasLanguages = parseJsonArray(details.languages).length > 0;
@@ -41,7 +44,7 @@ function isProfileComplete({ profile_image, profile_images, service_details }) {
 // ou avec un adaptateur autour de connection.execute() dans une transaction.
 async function autoVerifyProviderIfComplete(runQuery, whereSql, whereParams) {
   const rows = await runQuery(
-    `SELECT id, profile_image, profile_images, service_details, verification_status
+    `SELECT id, service_type, profile_image, profile_images, service_details, verification_status
      FROM service_providers WHERE ${whereSql}`,
     whereParams
   );
