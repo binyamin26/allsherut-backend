@@ -2,7 +2,7 @@
 // photo, galerie, expérience, description, langues — chacun pèse 20%.
 // Exception : pour les services de GALLERY_OPTIONAL_SERVICES la galerie n'est pas
 // requise (4 critères restants, 25% chacun).
-const GALLERY_OPTIONAL_SERVICES = ['babysitting', 'property_management'];
+const GALLERY_OPTIONAL_SERVICES = ['babysitting', 'property_management', 'doula'];
 // Un profil à 100% passe automatiquement en verification_status='verified',
 // sans validation manuelle par l'admin.
 
