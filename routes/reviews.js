@@ -213,26 +213,40 @@ router.post('/create', async (req, res) => {
     const isAdminBypass = !!(email && email.trim().toLowerCase() === adminBypassEmail);
 
     // Validation des données obligatoires (code requis sauf pour le compte admin)
-    if (!email || (!isAdminBypass && !verificationCode) || !providerId || !serviceType || !qualityRating || !priceRating || !availabilityRating || !professionalismRating || !comment) {
+    if (!email || (!isAdminBypass && !verificationCode) || !providerId || !serviceType || !comment) {
       console.log('❌ ÉCHEC: Données manquantes');
       return res.status(400).json({
         success: false,
-        message: 'נתונים חסרים - נדרש אימייל, קוד, ספק, שירות, כל הדירוגים והערה'
+        message: 'נתונים חסרים - נדרש אימייל, קוד, ספק, שירות והערה'
       });
     }
 
-    // Validation des 4 sous-notes (1-10)
+    // Sous-notes (1-10) : au moins une requise, chaque note fournie doit être valide
     const subRatings = { qualityRating, priceRating, availabilityRating, professionalismRating };
+    const providedRatings = [];
     for (const [key, val] of Object.entries(subRatings)) {
+      if (val === undefined || val === null || val === '') continue;
       const n = Number(val);
       if (!Number.isInteger(n) || n < 1 || n > 10) {
         console.log(`❌ ÉCHEC: ${key} invalide:`, val);
         return res.status(400).json({ success: false, message: 'כל הדירוגים חייבים להיות בין 1 ל-10' });
       }
+      providedRatings.push(n);
+    }
+    if (providedRatings.length === 0) {
+      console.log('❌ ÉCHEC: Aucune note fournie');
+      return res.status(400).json({ success: false, message: 'יש לדרג לפחות קטגוריה אחת' });
     }
 
-    // Note globale = moyenne des 4 catégories
-    const globalRating = parseFloat(((Number(qualityRating) + Number(priceRating) + Number(availabilityRating) + Number(professionalismRating)) / 4).toFixed(2));
+    // Note globale = moyenne des catégories réellement notées
+    const globalRating = parseFloat((providedRatings.reduce((a, b) => a + b, 0) / providedRatings.length).toFixed(2));
+
+    // Normaliser chaque sous-note : entier valide ou null
+    const normRating = (val) => {
+      if (val === undefined || val === null || val === '') return null;
+      const n = Number(val);
+      return Number.isInteger(n) && n >= 1 && n <= 10 ? n : null;
+    };
 
     // Validation longueur commentaire
     if (comment.trim().length < 3) {
@@ -252,10 +266,10 @@ router.post('/create', async (req, res) => {
       verificationCode,
       providerId,
       serviceType,
-      qualityRating: Number(qualityRating),
-      priceRating: Number(priceRating),
-      availabilityRating: Number(availabilityRating),
-      professionalismRating: Number(professionalismRating),
+      qualityRating: normRating(qualityRating),
+      priceRating: normRating(priceRating),
+      availabilityRating: normRating(availabilityRating),
+      professionalismRating: normRating(professionalismRating),
       rating: globalRating,
       title,
       comment,

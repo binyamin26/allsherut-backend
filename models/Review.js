@@ -274,7 +274,11 @@ if (displayNameOption === 'anonymous') {
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, TRUE, 0, NOW())
 `, [
   actualProviderId, email, reviewerName, serviceType,
-  rating, qualityRating, priceRating, availabilityRating, professionalismRating,
+  rating,
+  qualityRating ?? null,
+  priceRating ?? null,
+  availabilityRating ?? null,
+  professionalismRating ?? null,
   comment
 ]);
 
