@@ -57,6 +57,35 @@ async function autoVerifyProviderIfComplete(runQuery, whereSql, whereParams) {
     `UPDATE service_providers SET verification_status = 'verified' WHERE id = ?`,
     [provider.id]
   );
+
+  // Le profil vient d'atteindre 100% (transition pending -> verified, une seule
+  // fois). Notifie l'admin par email. On lit les infos maintenant, pendant que
+  // la connexion/transaction est encore ouverte, puis on envoie en
+  // fire-and-forget : ça ne doit jamais bloquer ni faire échouer la MAJ profil.
+  try {
+    const infoRows = await runQuery(
+      `SELECT sp.service_type, u.first_name, u.last_name, u.email, u.phone
+       FROM service_providers sp
+       JOIN users u ON u.id = sp.user_id
+       WHERE sp.id = ?`,
+      [provider.id]
+    );
+    const info = infoRows[0];
+    if (info) {
+      const payload = {
+        name: `${info.first_name || ''} ${info.last_name || ''}`.trim(),
+        phone: info.phone,
+        email: info.email,
+        serviceType: info.service_type
+      };
+      require('../services/emailService')
+        .sendProfileCompletedNotificationEmail(payload)
+        .catch((err) => console.error('[autoVerifyProviderIfComplete] Échec email 100%:', err.message));
+    }
+  } catch (err) {
+    console.error('[autoVerifyProviderIfComplete] Lecture infos notif 100% échouée:', err.message);
+  }
+
   return true;
 }
 

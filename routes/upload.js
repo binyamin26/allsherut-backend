@@ -349,6 +349,65 @@ router.post('/gallery-image', authenticateToken, upload.single('galleryImage'), 
 });
 
 // ============================================
+// POST /api/upload/gallery-image-url
+// Enregistre une URL Cloudinary déjà uploadée directement par le navigateur
+// (contourne le multipart vers fly.dev, parfois bloqué par des filtres réseau
+// côté client — voir /cloudinary-signature et la photo de profil à l'inscription)
+// ============================================
+router.post('/gallery-image-url', authenticateToken, async (req, res) => {
+  try {
+    const { imageUrl, serviceType: bodyServiceType } = req.body;
+
+    if (!imageUrl || typeof imageUrl !== 'string' || !/^https:\/\/res\.cloudinary\.com\//.test(imageUrl)) {
+      return res.error(400, 'כתובת תמונה לא תקינה');
+    }
+
+    const { query } = require('../config/database');
+    const serviceType = bodyServiceType || req.user.service_type;
+
+    const result = await query(
+      'SELECT profile_images FROM service_providers WHERE user_id = ? AND service_type = ?',
+      [req.user.id, serviceType]
+    );
+
+    if (!result[0]) {
+      return res.notFound('provider');
+    }
+
+    let gallery = [];
+    const rawImages = result[0].profile_images;
+    if (rawImages) {
+      gallery = Array.isArray(rawImages) ? rawImages : (() => { try { return JSON.parse(rawImages); } catch { return []; } })();
+    }
+
+    if (gallery.length >= 15) {
+      return res.error(400, 'מקסימום 15 תמונות בגלריה');
+    }
+
+    gallery.push(imageUrl);
+
+    await query(
+      'UPDATE service_providers SET profile_images = ? WHERE user_id = ? AND service_type = ?',
+      [JSON.stringify(gallery), req.user.id, serviceType]
+    );
+
+    // ✅ Profil 100% complet → visible immédiatement, sans validation admin
+    const { autoVerifyProviderIfComplete } = require('../utils/profileCompleteness');
+    await autoVerifyProviderIfComplete(query, 'user_id = ? AND service_type = ?', [req.user.id, serviceType]);
+    const statusRows = await query(
+      'SELECT verification_status FROM service_providers WHERE user_id = ? AND service_type = ?',
+      [req.user.id, serviceType]
+    );
+
+    return res.created('תמונה הועלתה לגלריה', { gallery, verificationStatus: statusRows[0]?.verification_status });
+
+  } catch (error) {
+    console.error('Gallery upload (url) error:', error);
+    return res.serverError(error);
+  }
+});
+
+// ============================================
 // DELETE /api/upload/gallery-image
 // ============================================
 router.delete('/gallery-image', authenticateToken, async (req, res) => {

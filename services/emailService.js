@@ -555,6 +555,33 @@ getEmailHeader(subtitle = '') {
   }
 
   // ============================================
+  // TEMPLATE: Provider profile reached 100%
+  // ============================================
+  getProfileCompletedNotificationTemplate({ name, phone, email, serviceType }) {
+    const timestamp = new Date().toLocaleString('he-IL', {
+      timeZone: 'Asia/Jerusalem', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+
+    return `
+      ${this.getEmailHeader('✅ פרופיל ספק הושלם ב-100%')}
+          <div style="padding: 40px; direction: rtl;">
+            <div style="background: #f0fdf4; border-right: 3px solid #16a34a; color: #166534; padding: 12px 18px; border-radius: 10px; margin-bottom: 25px; font-size: 14px; font-weight: 600;">
+              📅 הושלם ב: ${timestamp}
+            </div>
+            <p style="color: #374151; font-size: 15px; line-height: 1.7; margin: 0 0 25px;">
+              הספק הבא מילא את כל שדות הפרופיל (תמונה, גלריה, ניסיון, תיאור, שפות) והפרופיל עבר אוטומטית לסטטוס "מאומת".
+            </p>
+
+            ${this._contactField('שם', name)}
+            ${this._contactField('טלפון', `<a href="tel:${phone}" style="color: #2F80ED; text-decoration: none; font-weight: 700;">${phone}</a>`)}
+            ${this._contactField('אימייל', `<a href="mailto:${email}" style="color: #1A5490; text-decoration: none;">${email}</a>`)}
+            ${this._contactField('תחום', serviceType)}
+          </div>
+      ${this.getEmailFooter()}
+    `;
+  }
+
+  // ============================================
   // MÉTHODES D'ENVOI
   // ============================================
 
@@ -659,6 +686,16 @@ getEmailHeader(subtitle = '') {
       adminEmail,
       isAdditionalService ? `🆕 ספק קיים הוסיף תחום - ${name}` : `🆕 ספק חדש נרשם - ${name}`,
       this.getNewProviderNotificationTemplate({ name, phone, email, serviceType, approveUrl, rejectUrl, isAdditionalService })
+    );
+  }
+
+  async sendProfileCompletedNotificationEmail({ name, phone, email, serviceType }) {
+    // Adresse demandée explicitement pour cette notification (indépendante d'ADMIN_EMAIL)
+    const notifyEmail = 'allsherutcontact@gmail.com';
+    return this._sendMail(
+      notifyEmail,
+      `✅ פרופיל הושלם ב-100% - ${name}`,
+      this.getProfileCompletedNotificationTemplate({ name, phone, email, serviceType })
     );
   }
 
