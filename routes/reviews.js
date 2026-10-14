@@ -138,8 +138,11 @@ if (existingReview) {
 router.post('/verify-code', async (req, res) => {
   try {
     console.log('🔍 Vérification code avis');
-    const { email, verificationCode, providerId, serviceType } = req.body;
-    
+    const { providerId, serviceType } = req.body;
+    // Les claviers mobiles (Samsung...) ajoutent souvent un espace final
+    const email = (req.body.email || '').trim();
+    const verificationCode = String(req.body.verificationCode || '').replace(/\D/g, '');
+
     // Validation des données
     if (!email || !verificationCode || !providerId || !serviceType) {
       return res.status(400).json({
@@ -207,7 +210,9 @@ router.post('/create', async (req, res) => {
     console.log('📝 Création avis avec publication immédiate');
     console.log('📋 Données reçues:', JSON.stringify(req.body, null, 2));
     
-    const { email, name, verificationCode, providerId, serviceType, qualityRating, priceRating, availabilityRating, professionalismRating, title, comment, displayNameOption } = req.body;
+    const email = (req.body.email || '').trim();
+    const verificationCode = String(req.body.verificationCode || '').replace(/\D/g, '');
+    const { name, providerId, serviceType, qualityRating, priceRating, availabilityRating, professionalismRating, title, comment, displayNameOption } = req.body;
 
     const adminBypassEmail = (process.env.REVIEW_ADMIN_BYPASS_EMAIL || 'binou.ben26@gmail.com').toLowerCase();
     const isAdminBypass = !!(email && email.trim().toLowerCase() === adminBypassEmail);
