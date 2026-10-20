@@ -170,6 +170,17 @@ case 'event_types': {
   break;
 }
 
+case 'product_types': {
+  const productTypesArray = value.split(',').map(v => v.trim());
+  if (productTypesArray.length > 0) {
+    const placeholders = productTypesArray.map(() => '?').join(',');
+    conditions.push(`JSON_OVERLAPS(sp.service_details->'$.product_types', JSON_ARRAY(${placeholders}))`);
+    params.push(...productTypesArray);
+    console.log(`[buildAdvancedFilters] Condition product_types ajoutée:`, productTypesArray);
+  }
+  break;
+}
+
 case 'work_types': {
   const workTypesArray = value.split(',').map(v => v.trim());
   if (workTypesArray.length > 0) {
