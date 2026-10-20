@@ -414,8 +414,20 @@ case 'qualifications':
         }
         break;
 
-      default:
-        console.log(`[buildAdvancedFilters] Filtre non reconnu: ${key} = ${value}`);
+      default: {
+        // Filtres multi-choix génériques (xxx_types / xxxTypes) stockés dans service_details
+        if (/^[A-Za-z_]+[Tt]ypes$/.test(key)) {
+          const typesArray = [].concat(value).join(',').split(',').map(v => v.trim()).filter(Boolean);
+          if (typesArray.length > 0) {
+            const placeholders = typesArray.map(() => '?').join(',');
+            conditions.push(`JSON_OVERLAPS(sp.service_details->'$.${key}', JSON_ARRAY(${placeholders}))`);
+            params.push(...typesArray);
+            console.log(`[buildAdvancedFilters] Condition générique ${key} ajoutée:`, typesArray);
+          }
+        } else {
+          console.log(`[buildAdvancedFilters] Filtre non reconnu: ${key} = ${value}`);
+        }
+      }
     }
   });
 
