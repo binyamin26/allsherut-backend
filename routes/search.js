@@ -181,6 +181,17 @@ case 'product_types': {
   break;
 }
 
+case 'kosher_types': {
+  const kosherTypesArray = value.split(',').map(v => v.trim());
+  if (kosherTypesArray.length > 0) {
+    const placeholders = kosherTypesArray.map(() => '?').join(',');
+    conditions.push(`JSON_OVERLAPS(sp.service_details->'$.kosher_types', JSON_ARRAY(${placeholders}))`);
+    params.push(...kosherTypesArray);
+    console.log(`[buildAdvancedFilters] Condition kosher_types ajoutée:`, kosherTypesArray);
+  }
+  break;
+}
+
 case 'work_types': {
   const workTypesArray = value.split(',').map(v => v.trim());
   if (workTypesArray.length > 0) {
