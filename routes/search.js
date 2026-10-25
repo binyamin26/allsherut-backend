@@ -469,7 +469,7 @@ router.get('/providers', async (req, res) => {
 
     // Validation du service si fourni
     if (service) {
-const validServices = ['babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'sports_activities', 'eldercare', 'laundry', 'property_management', 'electrician', 'plumbing','air_conditioning', 'gas_technician','drywall', 'carpentry', 'home_organization', 'event_entertainment', 'event_equipment_rental', 'event_food_stands', 'dj', 'private_chef', 'catering', 'pastry', 'painting', 'waterproofing', 'contractor','aluminum','glass_works', 'locksmith', 'moving', 'photographer', 'event_decoration', 'pest_control', 'handyman', 'mechanic', 'metalwork', 'driver', 'doula'];
+const validServices = ['babysitting', 'cleaning', 'gardening', 'petcare', 'tutoring', 'sports_activities', 'eldercare', 'laundry', 'property_management', 'electrician', 'plumbing','air_conditioning', 'gas_technician','drywall', 'carpentry', 'home_organization', 'event_entertainment', 'event_equipment_rental', 'event_food_stands', 'dj', 'private_chef', 'catering', 'pastry', 'painting', 'waterproofing', 'contractor','aluminum','glass_works', 'locksmith', 'moving', 'photographer', 'event_decoration', 'pest_control', 'handyman', 'mechanic', 'metalwork', 'driver', 'doula', 'security_cameras', 'security_alarms', 'intercom_access', 'networking', 'audio_systems', 'smart_home'];
       if (!validServices.includes(service)) {
         const { errorResponse, statusCode } = ErrorHandler.validationError([{
           field: 'service',
