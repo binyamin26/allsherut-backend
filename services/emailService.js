@@ -699,6 +699,35 @@ getEmailHeader(subtitle = '') {
     );
   }
 
+  // Alerte admin : erreur d'affichage rencontrée par un visiteur (voir routes/clientErrors.js).
+  // Les champs viennent du navigateur d'un visiteur : on les échappe avant de les mettre dans le HTML.
+  async sendClientErrorEmail({ message, stack, componentStack, url, language, userAgent, time }) {
+    const adminEmail = process.env.ADMIN_EMAIL || 'allsherutcontact@gmail.com';
+    const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const row = (label, value) => value
+      ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b;vertical-align:top;white-space:nowrap">${label}</td><td style="padding:4px 0">${esc(value)}</td></tr>`
+      : '';
+    const block = (label, value) => value
+      ? `<h4 style="margin:16px 0 4px">${label}</h4><pre style="background:#f1f5f9;padding:10px;border-radius:6px;white-space:pre-wrap;font-size:12px;direction:ltr;text-align:left">${esc(value)}</pre>`
+      : '';
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;direction:ltr;text-align:left">
+        <h2 style="color:#b91c1c">⚠️ Erreur sur le site AllSherut</h2>
+        <p>Un visiteur a vu la page d'erreur de secours.</p>
+        <table style="font-size:14px">
+          ${row('Message', message)}
+          ${row('Page', url)}
+          ${row('Langue', language)}
+          ${row('Navigateur', userAgent)}
+          ${row('Heure (UTC)', time)}
+        </table>
+        ${block('Stack', stack)}
+        ${block('Composants', componentStack)}
+        <p style="color:#64748b;font-size:12px">Une même erreur n'est signalée qu'une fois toutes les 6 heures.</p>
+      </div>`;
+    return this._sendMail(adminEmail, `⚠️ Erreur site: ${String(message).slice(0, 80)}`, html);
+  }
+
   async verifyConnection() {
     console.log('✅ Email service ready (Resend)');
     return true;

@@ -139,6 +139,7 @@ app.use('/api/health', require('./routes/health'));
 app.use('/api/services', require('./routes/services'));
 app.use('/api/location', require('./routes/location'));
 app.use('/api/contact', require('./routes/contact'));
+app.use('/api/client-errors', require('./routes/clientErrors'));
 
 // Authentification
 app.use('/api/auth', require('./routes/auth'));
