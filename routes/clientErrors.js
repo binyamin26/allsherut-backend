@@ -11,6 +11,7 @@ const router = express.Router();
 const DEDUPE_WINDOW_MS = 6 * 60 * 60 * 1000; // une même erreur = 1 email max / 6 h
 const MAX_EMAILS_PER_HOUR = 10;              // plafond global, quoi qu'il arrive
 const HOUR_MS = 60 * 60 * 1000;
+const BOT_UA = /bot|crawler|spider|crawling|lighthouse|headless/i;
 
 const seen = new Map();   // signature -> { firstAt, lastEmailAt, count }
 let sentTimestamps = [];  // horodatages des emails envoyés sur la dernière heure
@@ -49,6 +50,10 @@ router.post('/', perIpLimiter, async (req, res) => {
       userAgent: clip(req.get('User-Agent'), 300),
       time: new Date().toISOString()
     };
+
+    // Robots (Googlebot, etc.) : pas d'alerte, ce n'est pas un visiteur. Filtre aussi côté serveur
+    // pour les anciens bundles frontend encore en cache qui ne filtrent pas.
+    if (BOT_UA.test(report.userAgent)) return;
 
     const now = Date.now();
     cleanup(now);
