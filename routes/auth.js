@@ -355,6 +355,29 @@ return res.status(400).json({
         }
       }
 
+      // Galerie envoyée à l'inscription (URLs Cloudinary uploadées directement par le navigateur)
+      // puis passage automatique en "verified" si le profil est complet à 100%.
+      if (user.role === 'provider' && req.body.serviceDetails) {
+        try {
+          let galleryUrls = [];
+          try { galleryUrls = JSON.parse(req.body.galleryImageUrls || '[]'); } catch { galleryUrls = []; }
+          galleryUrls = (Array.isArray(galleryUrls) ? galleryUrls : [])
+            .filter(isTrustedCloudinaryUrl)
+            .slice(0, 15);
+          if (galleryUrls.length > 0) {
+            await query(
+              'UPDATE service_providers SET profile_images = ? WHERE user_id = ? AND service_type = ?',
+              [JSON.stringify(galleryUrls), user.id, serviceType]
+            );
+          }
+          const { autoVerifyProviderIfComplete } = require('../utils/profileCompleteness');
+          await autoVerifyProviderIfComplete(query, 'user_id = ? AND service_type = ?', [user.id, serviceType]);
+        } catch (galleryErr) {
+          // Ne jamais faire échouer l'inscription pour la galerie
+          console.error('⚠️ Galerie/auto-vérification à l inscription:', galleryErr.message);
+        }
+      }
+
       // Générer le token
       const token = generateToken(user.id, user.email, user.role);
       console.log(DEV_LOGS.AUTH.TOKEN_GENERATED, user.id);
