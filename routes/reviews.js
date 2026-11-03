@@ -214,11 +214,8 @@ router.post('/create', async (req, res) => {
     const verificationCode = String(req.body.verificationCode || '').replace(/\D/g, '');
     const { name, providerId, serviceType, qualityRating, priceRating, availabilityRating, professionalismRating, title, comment, displayNameOption } = req.body;
 
-    const adminBypassEmail = (process.env.REVIEW_ADMIN_BYPASS_EMAIL || 'binou.ben26@gmail.com').toLowerCase();
-    const isAdminBypass = !!(email && email.trim().toLowerCase() === adminBypassEmail);
-
-    // Validation des données obligatoires (code requis sauf pour le compte admin)
-    if (!email || (!isAdminBypass && !verificationCode) || !providerId || !serviceType || !comment) {
+    // Validation des données obligatoires (le code email est toujours requis)
+    if (!email || !verificationCode || !providerId || !serviceType || !comment) {
       console.log('❌ ÉCHEC: Données manquantes');
       return res.status(400).json({
         success: false,
