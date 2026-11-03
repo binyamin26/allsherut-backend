@@ -28,12 +28,14 @@ function parseJsonObject(value) {
   }
 }
 
-function isProfileComplete({ profile_image, profile_images, service_details, service_type }) {
+function isProfileComplete({ profile_image, profile_images, service_details, service_type, experience_years }) {
   const details = parseJsonObject(service_details);
 
   const hasPhoto = !!profile_image;
   const hasGallery = GALLERY_OPTIONAL_SERVICES.includes(service_type) || parseJsonArray(profile_images).length > 0;
-  const hasExperience = Number(details.experience_years) > 0;
+  // À l'inscription, l'expérience est stockée dans la colonne experience_years et sous la clé `experience`
+  // du JSON ; depuis le dashboard, sous service_details.experience_years. On accepte les trois.
+  const hasExperience = Number(details.experience_years) > 0 || Number(details.experience) > 0 || Number(experience_years) > 0;
   const hasDescription = !!(details.description || '').trim();
   const hasLanguages = parseJsonArray(details.languages).length > 0;
 
@@ -44,7 +46,7 @@ function isProfileComplete({ profile_image, profile_images, service_details, ser
 // ou avec un adaptateur autour de connection.execute() dans une transaction.
 async function autoVerifyProviderIfComplete(runQuery, whereSql, whereParams) {
   const rows = await runQuery(
-    `SELECT id, service_type, profile_image, profile_images, service_details, verification_status
+    `SELECT id, service_type, profile_image, profile_images, service_details, experience_years, verification_status
      FROM service_providers WHERE ${whereSql}`,
     whereParams
   );
