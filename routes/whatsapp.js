@@ -10,6 +10,25 @@ const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
 // In-memory OTP store: normalizedPhone → { code, expiresAt }
 const otpStore = new Map();
 
+const rateLimit = require('express-rate-limit');
+const mkLimiter = (windowMs, max) => rateLimit({
+  windowMs, max, standardHeaders: true, legacyHeaders: false,
+  message: { success: false, message: 'too_many_requests' }
+});
+const otpSendLimiter = mkLimiter(60 * 60 * 1000, 5);     // 5 codes / h / IP
+const otpVerifyLimiter = mkLimiter(15 * 60 * 1000, 10);  // 10 essais / 15 min / IP
+const msgLimiter = mkLimiter(60 * 60 * 1000, 20);        // notify + followup : 20 / h / IP
+
+// Un même numéro ne reçoit pas plus d'un message de ce type toutes les 5 min (anti-harcèlement)
+const lastSent = new Map();
+function tooSoon(key) {
+  const now = Date.now();
+  for (const [k, t] of lastSent) if (now - t > 5 * 60 * 1000) lastSent.delete(k);
+  if (lastSent.has(key)) return true;
+  lastSent.set(key, now);
+  return false;
+}
+
 // Normalize Israeli phone → international format (972XXXXXXXXX)
 function normalizePhone(phone) {
   if (!phone) return null;
@@ -20,7 +39,7 @@ function normalizePhone(phone) {
 }
 
 // POST /api/whatsapp/notify
-router.post('/notify', async (req, res) => {
+router.post('/notify', msgLimiter, async (req, res) => {
   try {
     const { providerPhone, providerName, serviceName } = req.body;
 
@@ -29,6 +48,7 @@ router.post('/notify', async (req, res) => {
     }
 
     const to = normalizePhone(providerPhone);
+    if (tooSoon('notify:' + to)) return res.json({ success: true, throttled: true });
 
     const payload = {
       messaging_product: 'whatsapp',
@@ -67,7 +87,7 @@ router.post('/notify', async (req, res) => {
 
 // POST /api/whatsapp/followup
 // Sends a delayed WA to the CLIENT asking if they concluded a deal with the provider
-router.post('/followup', async (req, res) => {
+router.post('/followup', msgLimiter, async (req, res) => {
   try {
     const { clientPhone, clientName, providerName, serviceName, action, providerPhone, delayMinutes = 1 } = req.body;
 
@@ -76,6 +96,7 @@ router.post('/followup', async (req, res) => {
     }
 
     const to = normalizePhone(clientPhone);
+    if (tooSoon('followup:' + to)) return res.json({ success: true, throttled: true });
     const delayMs = Math.min(delayMinutes, 120) * 60 * 1000; // cap at 2h
 
     res.json({ success: true, scheduledIn: `${delayMinutes}min` });
@@ -162,7 +183,7 @@ router.post('/followup', async (req, res) => {
 });
 
 // POST /api/whatsapp/send-otp
-router.post('/send-otp', async (req, res) => {
+router.post('/send-otp', otpSendLimiter, async (req, res) => {
   try {
     if (!TOKEN || !PHONE_NUMBER_ID) {
       console.error('WhatsApp env vars missing: WHATSAPP_TOKEN or WHATSAPP_PHONE_NUMBER_ID not set');
@@ -175,8 +196,9 @@ router.post('/send-otp', async (req, res) => {
     const to = normalizePhone(phone);
     if (!to) return res.status(400).json({ success: false, message: 'invalid phone' });
 
+    if (tooSoon('otp:' + to)) return res.status(429).json({ success: false, message: 'too_many_requests' });
     const code = String(Math.floor(100000 + Math.random() * 900000));
-    otpStore.set(to, { code, expiresAt: Date.now() + 10 * 60 * 1000 });
+    otpStore.set(to, { code, expiresAt: Date.now() + 10 * 60 * 1000, attempts: 0 });
 
     const payload = {
       messaging_product: 'whatsapp',
@@ -215,7 +237,7 @@ router.post('/send-otp', async (req, res) => {
 });
 
 // POST /api/whatsapp/verify-otp
-router.post('/verify-otp', (req, res) => {
+router.post('/verify-otp', otpVerifyLimiter, (req, res) => {
   const { phone, code } = req.body;
   if (!phone || !code) return res.status(400).json({ success: false, message: 'phone and code required' });
 
@@ -228,6 +250,8 @@ router.post('/verify-otp', (req, res) => {
     return res.json({ success: false, message: 'expired' });
   }
   if (entry.code !== String(code).trim()) {
+    entry.attempts = (entry.attempts || 0) + 1;
+    if (entry.attempts >= 5) otpStore.delete(to);
     return res.json({ success: false, message: 'invalid' });
   }
 

@@ -1,5 +1,15 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
+
+// Anti-spam : chaque envoi déclenche un email admin + un email de remerciement à l'adresse saisie
+const contactLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'יותר מדי פניות. נסה שוב מאוחר יותר' }
+});
 const emailService = require('../services/emailService');
 
 // ✨ NOUVEAUX IMPORTS UNIFIÉS
@@ -36,7 +46,7 @@ const validateContactForm = (data) => {
 // =============================================
 // POST /api/contact - Formulaire contact UNIFIÉ
 // =============================================
-router.post('/', async (req, res) => {
+router.post('/', contactLimiter, async (req, res) => {
   try {
     console.log(DEV_LOGS.API.REQUEST_RECEIVED, 'Contact form submission');
     

@@ -171,6 +171,15 @@ const resetPasswordLimiter = rateLimit({
   }
 });
 
+// Anti-bruteforce : verify-password est un oracle de mot de passe, limité par IP
+const verifyPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { valid: false, message: 'יותר מדי ניסיונות. נסה שוב מאוחר יותר' }
+});
+
 // ✅ NOUVEAU - Vérifier si téléphone déjà utilisé pour un service
 router.post('/check-phone', async (req, res) => {
   try {
@@ -1175,6 +1184,10 @@ router.get('/stats', authenticateToken, async (req, res) => {
 // Nettoyage des tokens expirés (admin/cron)
 // =============================================
 router.delete('/cleanup-tokens', async (req, res) => {
+  // Réservé au cron/admin : exige le secret CRON_SECRET (refusé si non configuré)
+  if (!process.env.CRON_SECRET || req.get('x-cron-secret') !== process.env.CRON_SECRET) {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
   try {
     const result = await User.cleanExpiredTokens();
 
@@ -1257,7 +1270,7 @@ router.post('/check-email', async (req, res) => {
 // POST /api/auth/verify-password
 // Vérifier si le mot de passe correspond au compte existant
 // =============================================
-router.post('/verify-password', async (req, res) => {
+router.post('/verify-password', verifyPasswordLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     

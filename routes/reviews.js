@@ -14,6 +14,15 @@ const reviewVerificationLimiter = rateLimit({
   legacyHeaders: false
 });
 
+// Anti-bruteforce du code à 6 chiffres
+const reviewCodeCheckLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: 'יותר מדי ניסיונות. נסה שוב מאוחר יותר' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 // =============================================
 // MIDDLEWARE D'AUTHENTIFICATION
 // =============================================
@@ -135,7 +144,7 @@ if (existingReview) {
 });
 
 // ROUTE 2: VÉRIFIER CODE REÇU PAR EMAIL
-router.post('/verify-code', async (req, res) => {
+router.post('/verify-code', reviewCodeCheckLimiter, async (req, res) => {
   try {
     console.log('🔍 Vérification code avis');
     const { providerId, serviceType } = req.body;
