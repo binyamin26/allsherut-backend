@@ -8,7 +8,7 @@ const FROM = 'AllSherut <contact@allsherut.com>';
 
 class EmailService {
   constructor() {
-    this.logoUrl = 'https://allsherut.com/images/logo-homesherut26.png';
+    this.logoUrl = 'https://allsherut.com/images/logo-email-as.png';
   }
 
   generateResetToken() {
