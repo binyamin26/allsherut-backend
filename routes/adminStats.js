@@ -54,7 +54,7 @@ router.get('/', requireAdmin, async (req, res) => {
 
     const [
       totalsRows, dailyRows, byService, topProviders, recent,
-      signupRows, providerStatus, userTotals
+      signupRows, providerStatus, userTotals, prevLeads, prevSignups, uniq
     ] = await Promise.all([
       query(`SELECT
           SUM(clicked_at >= CURDATE()) AS today,
@@ -90,7 +90,7 @@ router.get('/', requireAdmin, async (req, res) => {
         FROM contact_clicks cc
         LEFT JOIN service_providers sp ON sp.id = cc.provider_id
         LEFT JOIN users u ON u.id = sp.user_id
-        ORDER BY cc.id DESC LIMIT 25`),
+        ORDER BY cc.id DESC LIMIT 200`),
       query(`SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS d,
           SUM(role = 'provider') AS providers,
           SUM(role <> 'provider') AS clients
@@ -99,7 +99,17 @@ router.get('/', requireAdmin, async (req, res) => {
         GROUP BY d`, [days - 1]),
       query(`SELECT verification_status AS status, COUNT(*) AS n
         FROM service_providers GROUP BY verification_status`),
-      query(`SELECT COUNT(*) AS users, SUM(role = 'provider') AS providers FROM users`)
+      query(`SELECT COUNT(*) AS users, SUM(role = 'provider') AS providers FROM users`),
+      // période précédente (même durée, juste avant) pour calculer l'évolution
+      query(`SELECT COUNT(*) AS n FROM contact_clicks
+        WHERE clicked_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+          AND clicked_at < DATE_SUB(CURDATE(), INTERVAL ? DAY)`, [days * 2 - 1, days - 1]),
+      query(`SELECT SUM(role = 'provider') AS providers, SUM(role <> 'provider') AS clients
+        FROM users
+        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+          AND created_at < DATE_SUB(CURDATE(), INTERVAL ? DAY)`, [days * 2 - 1, days - 1]),
+      query(`SELECT COUNT(DISTINCT client_phone) AS n FROM contact_clicks
+        WHERE clicked_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)`, [days - 1])
     ]);
 
     const t = totalsRows[0] || {};
@@ -117,6 +127,12 @@ router.get('/', requireAdmin, async (req, res) => {
       },
       daily: fillDays(dailyRows, days, ['total', 'calls', 'whatsapp']),
       signups: fillDays(signupRows, days, ['providers', 'clients']),
+      previous: {
+        leads: Number(prevLeads[0]?.n || 0),
+        providers: Number(prevSignups[0]?.providers || 0),
+        clients: Number(prevSignups[0]?.clients || 0)
+      },
+      uniqueClients: Number(uniq[0]?.n || 0),
       byService: byService.map(r => ({ service: r.service, clicks: Number(r.clicks) })),
       topProviders: topProviders.map(r => ({ id: r.id, name: r.name, service: r.service, clicks: Number(r.clicks) })),
       recent,
