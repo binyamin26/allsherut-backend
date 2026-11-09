@@ -637,7 +637,7 @@ try {
   'event_equipment_rental', 'event_food_stands',
   'dj', 'private_chef', 'catering', 'pastry', 'painting', 'waterproofing', 'contractor', 'aluminum',
   'glass_works', 'locksmith', 'moving', 'photographer', 'event_decoration', 'pest_control',
-  'handyman', 'mechanic', 'metalwork', 'driver', 'doula', 'art_therapy', 'security_cameras', 'security_alarms', 'intercom_access', 'networking', 'audio_systems', 'smart_home'
+  'handyman', 'mechanic', 'metalwork', 'driver', 'doula', 'art_therapy', 'kinesiology', 'security_cameras', 'security_alarms', 'intercom_access', 'networking', 'audio_systems', 'smart_home'
 ];
       
       if (!serviceType || !validServices.includes(serviceType)) {

@@ -161,7 +161,8 @@ const MESSAGES = {
       tutoring: 'שיעורים פרטיים',
       eldercare: 'עזרה לקשישים',
       pest_control: 'הדברה, ריסוס והרחקת מזיקים',
-      art_therapy: 'טיפול באמנות'
+      art_therapy: 'טיפול באמנות',
+      kinesiology: 'קינזיולוגיה'
     },
     
     ROLES: {
