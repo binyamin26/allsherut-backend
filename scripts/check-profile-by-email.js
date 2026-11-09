@@ -3,7 +3,7 @@ const pool = require('/app/config/database');
 const db = pool.pool || pool;
 const EMAIL = (process.argv[2] || '').trim().toLowerCase();
 if (!EMAIL) { console.log('Usage: node check-profile-by-email.js <email>'); process.exit(1); }
-const GALLERY_OPTIONAL = ['babysitting', 'property_management', 'doula', 'tutoring', 'art_therapy'];
+const GALLERY_OPTIONAL = ['babysitting', 'property_management', 'doula', 'tutoring', 'art_therapy', 'eldercare'];
 const arr = (v) => { if (!v) return []; if (Array.isArray(v)) return v; try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch { return []; } };
 const obj = (v) => { if (!v) return {}; if (typeof v === 'object') return v; try { const p = JSON.parse(v); return p && typeof p === 'object' ? p : {}; } catch { return {}; } };
 (async () => {
