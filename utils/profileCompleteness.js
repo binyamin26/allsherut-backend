@@ -5,6 +5,15 @@
 const GALLERY_OPTIONAL_SERVICES = ['babysitting', 'property_management', 'doula', 'tutoring', 'art_therapy', 'eldercare', 'kinesiology'];
 // Un profil à 100% passe automatiquement en verification_status='verified',
 // sans validation manuelle par l'admin.
+//
+// 6ᵉ critère « tarifs » : au moins une ligne de prix (hors titre) dans provider_pricing,
+// exigé pour tous les services SAUF ceux ci-dessous (chantiers sur devis, prix non
+// affichables). Doit rester aligné avec src/utils/pricingRequirement.js (frontend).
+const PRICING_NOT_REQUIRED_SERVICES = ['contractor', 'waterproofing', 'aluminum', 'glass_works', 'metalwork', 'carpentry'];
+
+function isPricingRequired(serviceType) {
+  return !PRICING_NOT_REQUIRED_SERVICES.includes(serviceType);
+}
 
 function parseJsonArray(value) {
   if (!value) return [];
@@ -28,7 +37,8 @@ function parseJsonObject(value) {
   }
 }
 
-function isProfileComplete({ profile_image, profile_images, service_details, service_type, experience_years }) {
+// hasPricing : undefined => critère tarifs ignoré (anciens appelants / scripts).
+function isProfileComplete({ profile_image, profile_images, service_details, service_type, experience_years }, hasPricing) {
   const details = parseJsonObject(service_details);
 
   const hasPhoto = !!profile_image;
@@ -39,7 +49,9 @@ function isProfileComplete({ profile_image, profile_images, service_details, ser
   const hasDescription = !!(details.description || '').trim();
   const hasLanguages = parseJsonArray(details.languages).length > 0;
 
-  return hasPhoto && hasGallery && hasExperience && hasDescription && hasLanguages;
+  const pricingOk = hasPricing === undefined || !isPricingRequired(service_type) || hasPricing === true;
+
+  return hasPhoto && hasGallery && hasExperience && hasDescription && hasLanguages && pricingOk;
 }
 
 // runQuery: (sql, params) => Promise<rows[]> — compatible avec query() du pool
@@ -53,7 +65,15 @@ async function autoVerifyProviderIfComplete(runQuery, whereSql, whereParams) {
 
   const provider = rows[0];
   if (!provider || provider.verification_status !== 'pending') return false;
-  if (!isProfileComplete(provider)) return false;
+  let hasPricing = true;
+  if (isPricingRequired(provider.service_type)) {
+    const priceRows = await runQuery(
+      'SELECT COUNT(*) AS n FROM provider_pricing WHERE provider_id = ? AND is_title = 0',
+      [provider.id]
+    );
+    hasPricing = Number(priceRows[0]?.n) > 0;
+  }
+  if (!isProfileComplete(provider, hasPricing)) return false;
 
   await runQuery(
     `UPDATE service_providers SET verification_status = 'verified' WHERE id = ?`,
@@ -91,4 +111,4 @@ async function autoVerifyProviderIfComplete(runQuery, whereSql, whereParams) {
   return true;
 }
 
-module.exports = { isProfileComplete, autoVerifyProviderIfComplete };
+module.exports = { isProfileComplete, autoVerifyProviderIfComplete, isPricingRequired, PRICING_NOT_REQUIRED_SERVICES };

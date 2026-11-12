@@ -147,7 +147,19 @@ router.put('/my', authenticateToken, async (req, res) => {
       [providerId]
     );
 
-    return res.json({ success: true, message: 'המחירון נשמר בהצלחה', data: saved.map(r => ({ ...r, is_title: !!r.is_title })) });
+    // Les tarifs sont le 6ᵉ critère du profil : si tout le reste est déjà complet,
+    // la fiche passe maintenant de 'pending' à 'verified'.
+    let verificationStatus;
+    try {
+      const { autoVerifyProviderIfComplete } = require('../utils/profileCompleteness');
+      await autoVerifyProviderIfComplete(query, 'id = ?', [providerId]);
+      const st = await query('SELECT verification_status FROM service_providers WHERE id = ?', [providerId]);
+      verificationStatus = st[0]?.verification_status;
+    } catch (verifyErr) {
+      console.error('PUT /pricing/my auto-vérification échouée:', verifyErr.message);
+    }
+
+    return res.json({ success: true, message: 'המחירון נשמר בהצלחה', verificationStatus, data: saved.map(r => ({ ...r, is_title: !!r.is_title })) });
   } catch (err) {
     console.error('PUT /pricing/my error:', err);
     return res.status(500).json({ success: false, message: 'שגיאה בשמירת המחירון' });
