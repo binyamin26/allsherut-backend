@@ -56,7 +56,13 @@ function isProfileComplete({ profile_image, profile_images, service_details, ser
 
 // runQuery: (sql, params) => Promise<rows[]> — compatible avec query() du pool
 // ou avec un adaptateur autour de connection.execute() dans une transaction.
+// DÉSACTIVÉ (2026-11-15) : la validation est désormais 100% manuelle. L'admin contacte
+// lui-même le prestataire (avis d'anciens clients, factures) puis approuve via le lien du
+// mail d'inscription (POST /api/auth/verify-provider/:token). Mettre à true pour réactiver.
+const AUTO_VERIFY_ENABLED = false;
+
 async function autoVerifyProviderIfComplete(runQuery, whereSql, whereParams) {
+  if (!AUTO_VERIFY_ENABLED) return false;
   const rows = await runQuery(
     `SELECT id, service_type, profile_image, profile_images, service_details, experience_years, verification_status
      FROM service_providers WHERE ${whereSql}`,
