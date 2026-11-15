@@ -162,7 +162,8 @@ const MESSAGES = {
       eldercare: 'עזרה לקשישים',
       pest_control: 'הדברה, ריסוס והרחקת מזיקים',
       art_therapy: 'טיפול באמנות',
-      kinesiology: 'קינזיולוגיה'
+      kinesiology: 'קינזיולוגיה',
+      accountant: 'רואה חשבון'
     },
     
     ROLES: {
