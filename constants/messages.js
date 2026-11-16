@@ -163,7 +163,8 @@ const MESSAGES = {
       pest_control: 'הדברה, ריסוס והרחקת מזיקים',
       art_therapy: 'טיפול באמנות',
       kinesiology: 'קינזיולוגיה',
-      accountant: 'רואה חשבון'
+      accountant: 'רואה חשבון',
+      osteopath: 'אוסטאופת'
     },
     
     ROLES: {
