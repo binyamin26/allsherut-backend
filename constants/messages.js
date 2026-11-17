@@ -164,7 +164,8 @@ const MESSAGES = {
       art_therapy: 'טיפול באמנות',
       kinesiology: 'קינזיולוגיה',
       accountant: 'רואה חשבון',
-      osteopath: 'אוסטאופת'
+      osteopath: 'אוסטאופת',
+      acupuncture: 'דיקור סיני'
     },
     
     ROLES: {
