@@ -165,7 +165,8 @@ const MESSAGES = {
       kinesiology: 'קינזיולוגיה',
       accountant: 'רואה חשבון',
       osteopath: 'אוסטאופת',
-      acupuncture: 'דיקור סיני'
+      acupuncture: 'דיקור סיני',
+      massage: 'עיסוי'
     },
     
     ROLES: {
